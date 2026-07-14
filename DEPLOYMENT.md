@@ -40,8 +40,7 @@ Use `BOT_MODE=webhook` only when the bot runtime has a public webhook URL.
 Run this against the production database after deploy:
 
 ```bash
-pnpm --filter @suupstars/api prisma:deploy
-pnpm --filter @suupstars/api prisma:seed
+pnpm run db:deploy:render:api
 ```
 
 The seed upserts both required active products:
@@ -65,7 +64,14 @@ Start command:
 pnpm --filter @suupstars/api start
 ```
 
+Pre-deploy command:
+
+```bash
+pnpm run db:deploy:render:api
+```
+
 The Render build script installs the API workspace graph first, then builds `packages/shared`, runs `prisma generate`, and compiles `apps/api`.
+The Render pre-deploy script installs the same workspace graph, runs `prisma migrate deploy`, and then runs the idempotent seed for `Telegram Stars` and `Telegram Premium`.
 
 ## Important
 
