@@ -62,8 +62,12 @@ function CheckoutContent() {
         ? { ...base, productType: "stars", quantity }
         : { ...base, productType: "premium", quantity: 1 };
 
-    const result = await createOrder.mutateAsync(input);
-    router.replace(`/orders/${result.order.id}`);
+    try {
+      const result = await createOrder.mutateAsync(input);
+      router.replace(`/orders/${result.order.id}`);
+    } catch {
+      // The mutation state renders a user-facing error below the form.
+    }
   }
 
   return (

@@ -25,6 +25,7 @@ const envSchema = z.object({
   BOT_TOKEN: z.string().min(1),
   WEB_APP_URL: z.string().url(),
   API_PUBLIC_URL: optionalUrl,
+  CORS_ORIGINS: z.string().default(""),
   ADMIN_IDS: z.string().default(""),
   DEV_ALLOW_BROWSER: booleanFromEnv.default(false),
   SUPPORT_URL: optionalUrl,
@@ -35,3 +36,11 @@ export const env = envSchema.parse(process.env);
 export const adminTelegramIds = env.ADMIN_IDS.split(",")
   .map((value) => value.trim())
   .filter(Boolean);
+
+export const corsOrigins = Array.from(
+  new Set(
+    [env.WEB_APP_URL, ...env.CORS_ORIGINS.split(",")]
+      .map((value) => value.trim().replace(/\/+$/, ""))
+      .filter(Boolean),
+  ),
+);

@@ -104,17 +104,28 @@ export async function createOrder(input: CreateOrderRequest, user: User) {
     return created;
   });
 
-  await Promise.all([
-    notifyUser(
-      user.telegramId,
-      `Заказ <b>${order.orderNumber}</b> создан.\nСтатус: ожидает подтверждения оплаты.`,
-    ),
-    notifyAdmins(
-      `Новый заказ <b>${order.orderNumber}</b>\nПользователь: ${user.username ?? user.telegramId.toString()}\nСумма: ${price.totalRub} RUB / ${price.totalUsd} USD`,
-    ),
-  ]);
+  void notifyOrderCreated(order.orderNumber, user.telegramId, user.username, price).catch((error) => {
+    console.error(`Order ${order.orderNumber} was created, but Telegram notifications failed`, error);
+  });
 
   return order;
+}
+
+async function notifyOrderCreated(
+  orderNumber: string,
+  telegramId: bigint,
+  username: string | null,
+  price: { totalRub: number; totalUsd: number },
+) {
+  await Promise.all([
+    notifyUser(
+      telegramId,
+      `Заказ <b>${orderNumber}</b> создан.\nСтатус: ожидает подтверждения оплаты.`,
+    ),
+    notifyAdmins(
+      `Новый заказ <b>${orderNumber}</b>\nПользователь: ${username ?? telegramId.toString()}\nСумма: ${price.totalRub} RUB / ${price.totalUsd} USD`,
+    ),
+  ]);
 }
 
 export async function listUserOrders(user: User) {

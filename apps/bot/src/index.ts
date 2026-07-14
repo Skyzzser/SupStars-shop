@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import express from "express";
 import { Bot, InputFile, webhookCallback, type Context } from "grammy";
-import { createBotOrder, listBotOrders } from "./api.js";
+import { BotApiError, createBotOrder, listBotOrders } from "./api.js";
 import { canUseTelegramWebApp, env } from "./env.js";
 import {
   commentInlineKeyboard,
@@ -197,12 +197,25 @@ async function createOrderFromDraft(
       },
     );
   } catch (error) {
-    console.error("Failed to create bot order", error);
+    logBotApiError("Failed to create bot order", error);
     await ctx.reply(
-      "Не получилось создать заказ. Проверьте, что API запущен, база данных работает и товары добавлены через seed.",
+      "Не получилось создать заказ. Мы уже записали причину в логах бота. Попробуйте еще раз чуть позже или напишите в поддержку.",
       { reply_markup: storeInlineKeyboard() },
     );
   }
+}
+
+function logBotApiError(message: string, error: unknown) {
+  if (error instanceof BotApiError) {
+    console.error(message, {
+      status: error.status,
+      code: error.code,
+      detail: error.message,
+    });
+    return;
+  }
+
+  console.error(message, error);
 }
 
 async function showOrders(ctx: Context) {
@@ -227,8 +240,8 @@ async function showOrders(ctx: Context) {
       reply_markup: storeInlineKeyboard(),
     });
   } catch (error) {
-    console.error("Failed to load bot orders", error);
-    await ctx.reply("Не получилось загрузить заказы. Проверьте, что API запущен.", {
+    logBotApiError("Failed to load bot orders", error);
+    await ctx.reply("Не получилось загрузить заказы. Попробуйте еще раз чуть позже.", {
       reply_markup: storeInlineKeyboard(),
     });
   }

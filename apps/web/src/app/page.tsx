@@ -5,11 +5,12 @@ import { ShieldCheck } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/Button";
 import { ProductCard } from "@/components/ProductCard";
-import { ErrorState, LoadingState } from "@/components/StateViews";
+import { EmptyState, ErrorState, LoadingState } from "@/components/StateViews";
 import { useProducts } from "@/hooks/useOrders";
 
 export default function HomePage() {
   const products = useProducts();
+  const productList = products.data?.products ?? [];
 
   return (
     <AppShell
@@ -29,11 +30,19 @@ export default function HomePage() {
         </p>
       </section>
 
-      {products.isLoading ? <LoadingState /> : null}
+      {products.isLoading ? <LoadingState text="Загружаем товары..." /> : null}
       {products.isError ? <ErrorState message={products.error.message} /> : null}
+      {products.isSuccess && productList.length === 0 ? (
+        <EmptyState
+          title="Товары не найдены"
+          text="В базе нет активных товаров. Запустите seed для production database."
+        />
+      ) : null}
 
       <div className="space-y-3">
-        {products.data?.products.map((product) => <ProductCard key={product.id} product={product} />)}
+        {productList.map((product) => (
+          <ProductCard key={product.id} product={product} />
+        ))}
       </div>
     </AppShell>
   );

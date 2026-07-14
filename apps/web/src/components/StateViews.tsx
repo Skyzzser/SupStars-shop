@@ -13,7 +13,7 @@ export function LoadingState({ text = "Загрузка..." }: { text?: string }
 export function ErrorState({ message }: { message: string }) {
   return (
     <Panel className="flex items-start gap-3 text-red-200">
-      <AlertCircle className="mt-0.5" size={18} />
+      <AlertCircle className="mt-0.5 shrink-0" size={18} />
       <span>{message}</span>
     </Panel>
   );

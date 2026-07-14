@@ -2,7 +2,7 @@ import cors from "cors";
 import express from "express";
 import helmet from "helmet";
 import morgan from "morgan";
-import { env } from "./config/env.js";
+import { corsOrigins, env } from "./config/env.js";
 import { prisma } from "./db/prisma.js";
 import { errorMiddleware } from "./middleware/error.js";
 import { adminRouter } from "./routes/admin.js";
@@ -15,7 +15,17 @@ export function createApp() {
   app.use(helmet());
   app.use(
     cors({
-      origin: env.NODE_ENV === "production" ? env.WEB_APP_URL : true,
+      origin:
+        env.NODE_ENV === "production"
+          ? (origin, callback) => {
+              if (!origin || corsOrigins.includes(origin.replace(/\/+$/, ""))) {
+                callback(null, true);
+                return;
+              }
+
+              callback(new Error(`CORS blocked origin: ${origin}`));
+            }
+          : true,
       credentials: true,
     }),
   );
@@ -24,7 +34,7 @@ export function createApp() {
 
   app.get("/health", async (_req, res) => {
     await prisma.$queryRaw`SELECT 1`;
-    res.json({ ok: true });
+    res.json({ ok: true, service: "suupstars-api" });
   });
 
   app.use("/products", productsRouter);
