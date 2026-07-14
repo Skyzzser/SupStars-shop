@@ -49,6 +49,24 @@ The seed upserts both required active products:
 - `Telegram Stars`
 - `Telegram Premium`
 
+## Render API service
+
+Use the repository root as Render's root directory.
+
+Build command:
+
+```bash
+pnpm run build:render:api
+```
+
+Start command:
+
+```bash
+pnpm --filter @suupstars/api start
+```
+
+The Render build script installs the API workspace graph first, then builds `packages/shared`, runs `prisma generate`, and compiles `apps/api`.
+
 ## Important
 
 Do not use `localhost` in production `NEXT_PUBLIC_API_URL` or `API_PUBLIC_URL`.
