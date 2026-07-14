@@ -9,7 +9,7 @@
     "dev:bot": "pnpm --filter @suupstars/shared build && pnpm --filter @suupstars/bot dev",
     "dev:web": "pnpm --filter @suupstars/shared build && pnpm --filter @suupstars/web dev",
     "build": "pnpm -r build",
-    "install:render:api": "pnpm --filter @suupstars/api... install --frozen-lockfile",
+    "install:render:api": "pnpm --filter @suupstars/api... install --frozen-lockfile --prod=false",
     "build:render:api": "pnpm run install:render:api && pnpm --filter @suupstars/api... build",
     "build:netlify": "pnpm --filter @suupstars/web... build",
     "lint": "pnpm -r lint",

@@ -5,14 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "pnpm run prisma:generate && tsc -p tsconfig.json",
+    "build": "pnpm run prisma:generate && pnpm exec tsc -p tsconfig.json",
     "start": "node dist/server.js",
     "lint": "eslint \"src/**/*.ts\" \"prisma/**/*.ts\"",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev",
-    "prisma:deploy": "prisma migrate deploy",
-    "prisma:seed": "tsx prisma/seed.ts"
+    "prisma:generate": "pnpm exec prisma generate",
+    "prisma:migrate": "pnpm exec prisma migrate dev",
+    "prisma:deploy": "pnpm exec prisma migrate deploy",
+    "prisma:seed": "pnpm exec tsx prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.2.1",
