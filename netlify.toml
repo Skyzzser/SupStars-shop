@@ -1,0 +1,7 @@
+[build]
+  command = "pnpm run build:netlify"
+  publish = "apps/web/.next"
+
+[build.environment]
+  NODE_VERSION = "22"
+  NEXT_TELEMETRY_DISABLED = "1"
