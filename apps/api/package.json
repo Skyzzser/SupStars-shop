@@ -12,8 +12,8 @@
     "prisma:generate": "pnpm exec prisma generate",
     "prisma:migrate": "pnpm exec prisma migrate dev",
     "prisma:deploy": "pnpm exec prisma migrate deploy",
-    "prisma:seed": "pnpm exec tsx prisma/seed.ts",
-    "prisma:setup": "pnpm run prisma:deploy && pnpm run prisma:seed"
+    "prisma:seed": "pnpm run prisma:generate && pnpm exec tsx prisma/seed.ts",
+    "prisma:setup": "pnpm run prisma:generate && pnpm run prisma:deploy && pnpm exec tsx prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.2.1",
