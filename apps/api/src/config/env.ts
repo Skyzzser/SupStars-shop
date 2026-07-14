@@ -1,0 +1,37 @@
+import { resolve } from "node:path";
+import { config } from "dotenv";
+import { z } from "zod";
+
+config({ path: resolve(process.cwd(), "../../.env") });
+config({ path: resolve(process.cwd(), ".env") });
+
+const optionalUrl = z.preprocess(
+  (value) => (value === "" ? undefined : value),
+  z.string().url().optional(),
+);
+
+const booleanFromEnv = z.preprocess((value) => {
+  if (typeof value !== "string") {
+    return value;
+  }
+
+  return ["1", "true", "yes", "on"].includes(value.toLowerCase());
+}, z.boolean());
+
+const envSchema = z.object({
+  NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+  PORT: z.coerce.number().int().positive().default(4000),
+  DATABASE_URL: z.string().min(1),
+  BOT_TOKEN: z.string().min(1),
+  WEB_APP_URL: z.string().url(),
+  API_PUBLIC_URL: optionalUrl,
+  ADMIN_IDS: z.string().default(""),
+  DEV_ALLOW_BROWSER: booleanFromEnv.default(false),
+  SUPPORT_URL: optionalUrl,
+});
+
+export const env = envSchema.parse(process.env);
+
+export const adminTelegramIds = env.ADMIN_IDS.split(",")
+  .map((value) => value.trim())
+  .filter(Boolean);
