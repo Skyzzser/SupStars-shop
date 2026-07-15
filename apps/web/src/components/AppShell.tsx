@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, HelpCircle, PackageCheck, ShieldCheck, ShoppingBag } from "lucide-react";
+import { Home, PackageCheck, ShieldCheck, ShoppingBag } from "lucide-react";
 import { clsx } from "clsx";
 import type { ReactNode } from "react";
 
@@ -11,7 +11,6 @@ const nav = [
   { href: "/stars", label: "Stars", icon: ShoppingBag },
   { href: "/premium", label: "Premium", icon: PackageCheck },
   { href: "/orders", label: "Заказы", icon: ShieldCheck },
-  { href: "/support", label: "FAQ", icon: HelpCircle },
 ];
 
 export function AppShell({ title, children, action }: { title: string; children: ReactNode; action?: ReactNode }) {
@@ -29,7 +28,7 @@ export function AppShell({ title, children, action }: { title: string; children:
 
       <section className="flex-1 space-y-4 safe-bottom">{children}</section>
 
-      <nav className="sticky bottom-0 -mx-4 mt-4 grid grid-cols-5 border-t border-tg-border bg-[rgba(13,17,23,0.92)] px-2 py-2 backdrop-blur">
+      <nav className="sticky bottom-0 -mx-4 mt-4 grid grid-cols-4 border-t border-tg-border bg-[rgba(13,17,23,0.94)] px-2 py-2 backdrop-blur">
         {nav.map((item) => {
           const active = pathname === item.href;
           const Icon = item.icon;

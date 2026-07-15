@@ -3,20 +3,43 @@
 import { useState } from "react";
 import type { OrderStatus } from "@suupstars/shared";
 import { ORDER_STATUSES } from "@suupstars/shared";
-import { Save, ShieldCheck } from "lucide-react";
+import { Lock, Save, ShieldCheck } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/Button";
 import { OrderSummary } from "@/components/OrderSummary";
 import { Panel } from "@/components/Panel";
 import { ErrorState, LoadingState } from "@/components/StateViews";
 import { StatusPill } from "@/components/StatusPill";
-import { useAdminOrders, useAdminUpdateNote, useAdminUpdateStatus } from "@/hooks/useOrders";
+import { useAdminOrders, useAdminUpdateNote, useAdminUpdateStatus, useCurrentUser } from "@/hooks/useOrders";
 
 export default function AdminPage() {
   const [status, setStatus] = useState<OrderStatus | undefined>();
-  const orders = useAdminOrders(status);
+  const currentUser = useCurrentUser();
+  const isAdmin = currentUser.data?.user.isAdmin === true;
+  const orders = useAdminOrders(status, isAdmin);
   const updateStatus = useAdminUpdateStatus();
   const updateNote = useAdminUpdateNote();
+
+  if (currentUser.isLoading) {
+    return (
+      <AppShell title="Admin">
+        <LoadingState text="Проверяем доступ..." />
+      </AppShell>
+    );
+  }
+
+  if (currentUser.isError || !isAdmin) {
+    return (
+      <AppShell title="Доступ закрыт" action={<Lock className="text-tg-hint" />}>
+        <Panel>
+          <h2 className="font-semibold">Нет доступа к Admin</h2>
+          <p className="mt-2 text-sm leading-5 text-tg-hint">
+            Этот раздел доступен только администраторам из ADMIN_IDS.
+          </p>
+        </Panel>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell title="Admin" action={<ShieldCheck className="text-tg-link" />}>

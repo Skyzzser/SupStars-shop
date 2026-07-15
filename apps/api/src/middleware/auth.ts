@@ -27,10 +27,8 @@ export async function requireTelegramUser(req: Request, _res: Response, next: Ne
       }
 
       if (env.DEV_ALLOW_BROWSER) {
-        const fallbackTelegramId = devTelegramId ?? adminTelegramIds[0] ?? "999000111";
-
         return {
-          id: Number(fallbackTelegramId),
+          id: Number(devTelegramId ?? "999000111"),
           username: req.header("x-dev-username") ?? "dev_user",
           first_name: "Dev",
         };

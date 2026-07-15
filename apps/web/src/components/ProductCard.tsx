@@ -12,24 +12,29 @@ export function ProductCard({ product }: { product: ProductDto }) {
     <Link href={href} className="block">
       <Panel className="transition active:scale-[0.99]">
         <div className="flex items-start justify-between gap-3">
-          <div className="flex gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-tg-button/15 text-tg-link">
+          <div className="flex min-w-0 gap-3">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md border border-tg-border bg-tg-button/15 text-tg-link">
               <Icon size={22} />
             </div>
-            <div>
+            <div className="min-w-0">
               <h2 className="font-semibold">{product.title}</h2>
               <p className="mt-1 text-sm leading-5 text-tg-hint">{product.description}</p>
             </div>
           </div>
-          <ArrowRight className="mt-1 text-tg-hint" size={18} />
+          <ArrowRight className="mt-1 shrink-0 text-tg-hint" size={18} />
         </div>
-        <div className="mt-4 flex flex-wrap gap-2 text-sm">
-          <span className="rounded-md bg-black/20 px-2.5 py-1 text-tg-text">{formatRub(product.priceRub)}</span>
+        <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
+          <span className="rounded-md border border-tg-border bg-black/20 px-2.5 py-1 text-tg-text">
+            {formatRub(product.priceRub)}
+          </span>
           {product.priceUsd > 0 ? (
-            <span className="rounded-md bg-black/20 px-2.5 py-1 text-tg-text">
+            <span className="rounded-md border border-tg-border bg-black/20 px-2.5 py-1 text-tg-text">
               {formatUsd(product.priceUsd)}
             </span>
           ) : null}
+          <span className="ml-auto rounded-md bg-tg-button/15 px-2.5 py-1 font-medium text-tg-link">
+            Выбрать
+          </span>
         </div>
       </Panel>
     </Link>

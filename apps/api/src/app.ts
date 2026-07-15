@@ -6,6 +6,7 @@ import { corsOrigins, env } from "./config/env.js";
 import { prisma } from "./db/prisma.js";
 import { errorMiddleware } from "./middleware/error.js";
 import { adminRouter } from "./routes/admin.js";
+import { meRouter } from "./routes/me.js";
 import { ordersRouter } from "./routes/orders.js";
 import { paymentsRouter } from "./routes/payments.js";
 import { productsRouter } from "./routes/products.js";
@@ -46,6 +47,7 @@ export function createApp() {
   });
 
   app.use("/products", productsRouter);
+  app.use("/me", meRouter);
   app.use("/orders", ordersRouter);
   app.use("/payments", paymentsRouter);
   app.use("/admin", adminRouter);

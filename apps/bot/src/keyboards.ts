@@ -3,14 +3,11 @@ import { appUrl, canUseTelegramWebApp, env } from "./env.js";
 
 export function mainReplyKeyboard() {
   return new Keyboard()
-    .text("Открыть магазин")
-    .row()
     .text("Купить звёзды")
     .text("Купить Premium")
     .row()
     .text("Мои заказы")
     .text("Поддержка")
-    .text("FAQ")
     .resized();
 }
 
@@ -19,8 +16,7 @@ export function storeInlineKeyboard() {
     .text("Купить звёзды", "buy:stars")
     .text("Купить Premium", "buy:premium")
     .row()
-    .text("Мои заказы", "orders:list")
-    .text("FAQ", "faq:open");
+    .text("Мои заказы", "orders:list");
 
   if (canUseTelegramWebApp()) {
     keyboard.row().webApp("Открыть Mini App", appUrl("/"));
@@ -54,7 +50,7 @@ export function cryptoInvoiceInlineKeyboard(payments: Array<{ asset: string | nu
     }
   }
 
-  keyboard.text("Мои заказы", "orders:list").text("FAQ", "faq:open");
+  keyboard.text("Мои заказы", "orders:list");
 
   return keyboard;
 }

@@ -11,6 +11,13 @@ export type ProductDto = {
   isActive: boolean;
 };
 
+export type CurrentUserDto = {
+  telegramId: string;
+  username: string | null;
+  firstName: string | null;
+  isAdmin: boolean;
+};
+
 export type OrderItemDto = {
   id: string;
   productType: ProductType;

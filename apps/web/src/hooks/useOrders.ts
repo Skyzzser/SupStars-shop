@@ -4,6 +4,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { CreateCryptoInvoiceRequest, CreateOrderRequest, OrderStatus, UpdateOrderStatusRequest } from "@suupstars/shared";
 import { api } from "@/lib/api";
 
+export function useCurrentUser() {
+  return useQuery({
+    queryKey: ["me"],
+    queryFn: api.currentUser,
+  });
+}
+
 export function useProducts() {
   return useQuery({
     queryKey: ["products"],
@@ -58,10 +65,11 @@ export function useCancelOrder() {
   });
 }
 
-export function useAdminOrders(status?: OrderStatus) {
+export function useAdminOrders(status?: OrderStatus, enabled = true) {
   return useQuery({
     queryKey: ["admin", "orders", status ?? "all"],
     queryFn: () => api.adminOrders(status),
+    enabled,
   });
 }
 

@@ -1,4 +1,4 @@
-import type { AdminOrderDto, OrderDto, PaymentDto, ProductDto } from "@suupstars/shared";
+import type { AdminOrderDto, CurrentUserDto, OrderDto, PaymentDto, ProductDto } from "@suupstars/shared";
 import type { CreateCryptoInvoiceRequest, CreateOrderRequest, OrderStatus, UpdateOrderStatusRequest } from "@suupstars/shared";
 import { getTelegramInitData } from "./telegram";
 
@@ -100,6 +100,7 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  currentUser: () => apiFetch<{ user: CurrentUserDto }>("/me"),
   products: () => apiFetch<{ products: ProductDto[] }>("/products"),
   createOrder: (input: CreateOrderRequest) =>
     apiFetch<{ order: OrderDto }>("/orders", {

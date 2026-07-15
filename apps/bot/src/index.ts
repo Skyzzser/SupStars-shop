@@ -255,7 +255,7 @@ function ordersWithPaymentKeyboard(orders: Array<{ orderNumber: string; currentP
     }
   }
 
-  keyboard.text("Обновить", "orders:list").text("FAQ", "faq:open");
+  keyboard.text("Обновить", "orders:list");
 
   return hasPaymentButtons ? keyboard : storeInlineKeyboard();
 }
