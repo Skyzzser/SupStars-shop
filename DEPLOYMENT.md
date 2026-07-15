@@ -73,6 +73,36 @@ pnpm run db:deploy:render:api
 The Render build script installs the API workspace graph first, then builds `packages/shared`, runs `prisma generate`, and compiles `apps/api`.
 The Render pre-deploy script installs the same workspace graph, runs `prisma migrate deploy`, and then runs the idempotent seed for `Telegram Stars` and `Telegram Premium`.
 
+## Render Bot Web Service
+
+Render free background workers are not available, so deploy the Telegram bot as a separate Web Service. The bot still uses Telegram polling by default, but also exposes an HTTP health server on `0.0.0.0:$PORT` for Render.
+
+Use the repository root as Render's root directory.
+
+Build command:
+
+```bash
+pnpm run build:render:bot
+```
+
+Start command:
+
+```bash
+pnpm run start:render:bot
+```
+
+Required env:
+
+```env
+NODE_ENV=production
+BOT_TOKEN=123456:real-token
+API_PUBLIC_URL=https://your-public-api.example.com
+WEB_APP_URL=https://your-mini-app.netlify.app
+BOT_MODE=polling
+```
+
+Render provides `PORT` automatically for Web Services. `BOT_PORT` is only a local fallback.
+
 ## Important
 
 Do not use `localhost` in production `NEXT_PUBLIC_API_URL` or `API_PUBLIC_URL`.

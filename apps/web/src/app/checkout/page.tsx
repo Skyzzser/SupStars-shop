@@ -11,13 +11,16 @@ import {
   STARS_MIN_QUANTITY,
 } from "@suupstars/shared";
 import type { CreateOrderRequest, ProductType } from "@suupstars/shared";
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/Button";
 import { Panel } from "@/components/Panel";
 import { ErrorState, LoadingState } from "@/components/StateViews";
 import { useCreateOrder } from "@/hooks/useOrders";
 import { makeIdempotencyKey } from "@/lib/idempotency";
+import { isTelegramEnvironment } from "@/lib/telegram";
+
+const HAS_DEV_AUTH = Boolean(process.env.NEXT_PUBLIC_DEV_TELEGRAM_ID);
 
 export default function CheckoutPage() {
   return (
@@ -41,14 +44,19 @@ function CheckoutContent() {
   const [recipient, setRecipient] = useState("");
   const [comment, setComment] = useState("");
   const [idempotencyKey] = useState(makeIdempotencyKey);
+  const [canAuthenticate, setCanAuthenticate] = useState(HAS_DEV_AUTH);
   const createOrder = useCreateOrder();
+
+  useEffect(() => {
+    setCanAuthenticate(HAS_DEV_AUTH || isTelegramEnvironment());
+  }, []);
 
   const price = useMemo(() => {
     return productType === "stars" ? calculateStarsPrice(quantity) : calculatePremiumPrice();
   }, [productType, quantity]);
 
   const productTitle = productType === "stars" ? "Telegram Stars" : "Telegram Premium";
-  const canSubmit = recipient.trim().length > 0 && !createOrder.isPending;
+  const canSubmit = canAuthenticate && recipient.trim().length > 0 && !createOrder.isPending;
 
   async function onSubmit() {
     const base = {
@@ -117,6 +125,9 @@ function CheckoutContent() {
       </Panel>
 
       {createOrder.isError ? <ErrorState message={createOrder.error.message} /> : null}
+      {!canAuthenticate ? (
+        <ErrorState message="Откройте магазин через кнопку Mini App в Telegram. В обычном браузере Telegram initData недоступен, поэтому заказ создать нельзя." />
+      ) : null}
 
       <div className="grid grid-cols-2 gap-2">
         <Link href={productType === "stars" ? "/stars" : "/premium"}>

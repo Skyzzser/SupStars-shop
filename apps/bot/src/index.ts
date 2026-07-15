@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import express from "express";
 import { Bot, InputFile, webhookCallback, type Context } from "grammy";
 import { BotApiError, createBotOrder, listBotOrders } from "./api.js";
-import { canUseTelegramWebApp, env } from "./env.js";
+import { botHttpPort, canUseTelegramWebApp, env } from "./env.js";
 import {
   commentInlineKeyboard,
   mainReplyKeyboard,
@@ -415,6 +415,30 @@ async function configureBotMenu() {
   console.log(`Telegram Web App menu button configured for ${env.WEB_APP_URL}`);
 }
 
+function createHealthApp() {
+  const app = express();
+
+  app.get("/", (_req, res) => {
+    res.status(200).json({
+      status: "ok",
+      service: "bot",
+      mode: env.BOT_MODE,
+    });
+  });
+
+  app.get("/healthz", (_req, res) => {
+    res.status(200).json({ status: "ok" });
+  });
+
+  return app;
+}
+
+function listenHttp(app: express.Express) {
+  app.listen(botHttpPort, "0.0.0.0", () => {
+    console.log(`Bot HTTP health server is listening on http://0.0.0.0:${botHttpPort}`);
+  });
+}
+
 async function start() {
   console.log(`Starting bot in ${env.BOT_MODE} mode`);
   await bot.api.setMyCommands(commands);
@@ -431,7 +455,7 @@ async function start() {
       env.BOT_WEBHOOK_SECRET ? { secret_token: env.BOT_WEBHOOK_SECRET } : undefined,
     );
 
-    const app = express();
+    const app = createHealthApp();
     app.use(express.json());
     app.use(
       webhookCallback(
@@ -440,12 +464,11 @@ async function start() {
         env.BOT_WEBHOOK_SECRET ? { secretToken: env.BOT_WEBHOOK_SECRET } : undefined,
       ),
     );
-    app.listen(env.BOT_PORT, () => {
-      console.log(`Bot webhook server is listening on http://localhost:${env.BOT_PORT}`);
-    });
+    listenHttp(app);
     return;
   }
 
+  listenHttp(createHealthApp());
   await bot.api.deleteWebhook();
   await bot.start({
     onStart: (info) => console.log(`Bot @${info.username} started in polling mode`),

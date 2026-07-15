@@ -85,6 +85,9 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
 
     if (!response.ok) {
       const payload = (await response.json().catch(() => ({}))) as ApiErrorPayload;
+      if (payload.error?.code === "AUTH_REQUIRED") {
+        throw new Error("Откройте Mini App через Telegram, чтобы оформить заказ.");
+      }
       throw new Error(payload.error?.message ?? `API request failed with status ${response.status}`);
     }
 

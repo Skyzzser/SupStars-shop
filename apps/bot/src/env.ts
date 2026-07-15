@@ -15,16 +15,19 @@ const optionalString = z.preprocess(
   z.string().optional(),
 );
 
+const port = z.coerce.number().int().positive();
+
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   BOT_TOKEN: z.string().min(1),
   WEB_APP_URL: z.string().url(),
   API_PUBLIC_URL: optionalUrl,
   SUPPORT_URL: optionalUrl,
+  PORT: port.optional(),
   BOT_MODE: z.enum(["polling", "webhook"]).default("polling"),
   BOT_WEBHOOK_URL: optionalUrl,
   BOT_WEBHOOK_SECRET: optionalString,
-  BOT_PORT: z.coerce.number().int().positive().default(4010),
+  BOT_PORT: port.default(4010),
 }).superRefine((value, ctx) => {
   if (value.NODE_ENV === "production" && !value.API_PUBLIC_URL) {
     ctx.addIssue({
@@ -37,6 +40,7 @@ const envSchema = z.object({
 
 export const env = envSchema.parse(process.env);
 export const apiPublicUrl = (env.API_PUBLIC_URL ?? "http://localhost:4000").replace(/\/+$/, "");
+export const botHttpPort = env.PORT ?? env.BOT_PORT;
 
 export function appUrl(path = "/") {
   const url = new URL(path, env.WEB_APP_URL);
