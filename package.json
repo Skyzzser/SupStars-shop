@@ -15,6 +15,8 @@
     "build:render:bot": "pnpm run install:render:bot && pnpm --filter @suupstars/bot... build",
     "start:render:bot": "pnpm --filter @suupstars/bot start",
     "build:netlify": "pnpm --filter @suupstars/web... build",
+    "install:vercel:web": "pnpm install --frozen-lockfile --filter @suupstars/web... --prod=false",
+    "build:vercel:web": "pnpm --filter @suupstars/shared build && pnpm --filter @suupstars/web build",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
     "format": "prettier --write .",
