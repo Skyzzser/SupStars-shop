@@ -3,7 +3,8 @@ import type { CreateOrderRequest } from "@suupstars/shared";
 import { calculatePremiumPrice, calculateStarsPrice } from "@suupstars/shared";
 import { prisma } from "../db/prisma.js";
 import { assertFound, ApiError } from "../lib/http.js";
-import { notifyAdmins, notifyUser } from "./telegram-notifier.js";
+import { notifyAdminsAboutOrderEvent } from "./admin-order-notifications.js";
+import { notifyUser } from "./telegram-notifier.js";
 
 const orderInclude = Prisma.validator<Prisma.OrderInclude>()({
   items: true,
@@ -17,6 +18,8 @@ const adminOrderInclude = Prisma.validator<Prisma.OrderInclude>()({
   statusHistory: { orderBy: { createdAt: "asc" } },
   user: true,
 });
+
+type UserOrderWithRelations = Prisma.OrderGetPayload<{ include: typeof orderInclude }>;
 
 function makeOrderNumber() {
   const date = new Date();
@@ -92,27 +95,20 @@ export async function createOrder(input: CreateOrderRequest, user: User) {
     return created;
   });
 
-  void notifyOrderCreated(order.orderNumber, user.telegramId, user.username, price).catch((error) => {
+  void notifyOrderCreated(order, user).catch((error) => {
     console.error(`Order ${order.orderNumber} was created, but Telegram notifications failed`, error);
   });
 
   return order;
 }
 
-async function notifyOrderCreated(
-  orderNumber: string,
-  telegramId: bigint,
-  username: string | null,
-  price: { totalRub: number; totalUsd: number },
-) {
+async function notifyOrderCreated(order: UserOrderWithRelations, user: User) {
   await Promise.all([
     notifyUser(
-      telegramId,
-      `Заказ <b>${orderNumber}</b> создан.\nСтатус: ожидает подтверждения оплаты.`,
+      user.telegramId,
+      `Заказ <b>${order.orderNumber}</b> создан.\nСтатус: ожидает подтверждения оплаты.`,
     ),
-    notifyAdmins(
-      `Новый заказ <b>${orderNumber}</b>\nПользователь: ${username ?? telegramId.toString()}\nСумма: ${price.totalRub} RUB / ${price.totalUsd} USD`,
-    ),
+    notifyAdminsAboutOrderEvent({ event: "created", order, buyer: user }),
   ]);
 }
 
@@ -187,6 +183,14 @@ export async function updateOrderStatus(
 
   if (status === "completed") {
     await notifyUser(order.user.telegramId, `Заказ <b>${order.orderNumber}</b> выполнен. Спасибо!`);
+  }
+
+  if (status === "cancelled" || status === "paid") {
+    await notifyAdminsAboutOrderEvent({
+      event: status === "cancelled" ? "cancelled" : "paid",
+      order,
+      buyer: order.user,
+    });
   }
 
   return order;

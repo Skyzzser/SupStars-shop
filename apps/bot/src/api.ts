@@ -19,6 +19,7 @@ export type OrderDto = {
   totalRub: number;
   totalUsd: number;
   payments?: PaymentDto[];
+  currentPayment?: PaymentDto | null;
   createdAt: string;
 };
 

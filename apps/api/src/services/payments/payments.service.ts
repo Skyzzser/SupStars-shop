@@ -2,7 +2,8 @@ import { Prisma, type Payment, type User } from "@prisma/client";
 import type { CryptoAsset } from "@suupstars/shared";
 import { prisma } from "../../db/prisma.js";
 import { assertFound, ApiError } from "../../lib/http.js";
-import { notifyAdmins, notifyUser } from "../telegram-notifier.js";
+import { notifyAdminsAboutOrderEvent } from "../admin-order-notifications.js";
+import { notifyUser } from "../telegram-notifier.js";
 import { CryptoBotPaymentProvider } from "./crypto-bot-provider.js";
 import { CRYPTO_BOT_PROVIDER, type CryptoWebhookUpdate } from "./types.js";
 
@@ -80,6 +81,15 @@ export async function createCryptoInvoice(input: { orderId: string; asset: Crypt
     include: paymentOrderInclude,
   });
 
+  void notifyAdminsAboutOrderEvent({
+    event: "invoice_created",
+    order: updatedOrder,
+    buyer: input.user,
+    payment: created,
+  }).catch((error) => {
+    console.error(`Crypto invoice ${created.providerPaymentId} was created, but admin notification failed`, error);
+  });
+
   return {
     order: updatedOrder,
     payment: created,
@@ -126,7 +136,7 @@ export async function confirmCryptoWebhook(input: {
     });
 
     if (payment.order.status === "paid" || payment.order.status === "processing" || payment.order.status === "completed") {
-      return { payment: updatedPayment, order: payment.order, alreadyPaid: true };
+      return { payment: updatedPayment, order: null, alreadyPaid: true as const };
     }
 
     const order = await tx.order.update({
@@ -143,11 +153,11 @@ export async function confirmCryptoWebhook(input: {
       include: paymentOrderWithUserInclude,
     });
 
-    return { payment: updatedPayment, order, alreadyPaid: false };
+    return { payment: updatedPayment, order, alreadyPaid: false as const };
   });
 
-  if (!updated.alreadyPaid) {
-    await notifyPaymentSuccess(updated.order.orderNumber, updated.order.user.telegramId, payment, update);
+  if (!updated.alreadyPaid && updated.order) {
+    await notifyPaymentSuccess(updated.order, updated.payment, update);
   }
 
   return { accepted: true, ignored: false };
@@ -179,8 +189,7 @@ function normalizePaymentStatus(status: string) {
 }
 
 async function notifyPaymentSuccess(
-  orderNumber: string,
-  telegramId: bigint,
+  order: Prisma.OrderGetPayload<{ include: typeof paymentOrderWithUserInclude }>,
   payment: Payment,
   update: CryptoWebhookUpdate,
 ) {
@@ -189,9 +198,14 @@ async function notifyPaymentSuccess(
 
   await Promise.all([
     notifyUser(
-      telegramId,
-      `✅ Оплата получена\n\nЗаказ: <b>${orderNumber}</b>\nСумма: <b>${amount} ${asset}</b>\nСтатус: <b>paid</b>`,
+      order.user.telegramId,
+      `✅ Оплата получена\n\nЗаказ: <b>${order.orderNumber}</b>\nСумма: <b>${amount} ${asset}</b>\nСтатус: <b>paid</b>`,
     ),
-    notifyAdmins(`Оплачен заказ <b>${orderNumber}</b>\nInvoice: ${update.payload.invoice_id}\nСумма: ${amount} ${asset}`),
+    notifyAdminsAboutOrderEvent({
+      event: "paid",
+      order,
+      buyer: order.user,
+      payment,
+    }),
   ]);
 }

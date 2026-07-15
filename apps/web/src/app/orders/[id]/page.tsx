@@ -6,6 +6,7 @@ import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/Button";
 import { OrderSummary } from "@/components/OrderSummary";
 import { Panel } from "@/components/Panel";
+import { PaymentSection } from "@/components/PaymentSection";
 import { ErrorState, LoadingState } from "@/components/StateViews";
 import { statusLabel } from "@/components/StatusPill";
 import { useCancelOrder, useOrder } from "@/hooks/useOrders";
@@ -13,7 +14,7 @@ import { useCancelOrder, useOrder } from "@/hooks/useOrders";
 export default function OrderPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const order = useOrder(params.id);
+  const order = useOrder(params.id, 5000);
   const cancelOrder = useCancelOrder();
   const canCancel =
     order.data?.order.status === "pending" || order.data?.order.status === "awaiting_payment";
@@ -31,12 +32,20 @@ export default function OrderPage() {
         <>
           <Panel>
             <OrderSummary order={order.data.order} />
+            <div className="mt-4 grid gap-2 text-sm">
+              <InfoRow label="Товар" value={order.data.order.items[0]?.title ?? "Заказ"} />
+              <InfoRow label="Количество" value={`${order.data.order.items[0]?.quantity ?? 1}`} />
+              <InfoRow label="Получатель" value={`@${order.data.order.recipientUsername}`} />
+              <InfoRow label="Статус" value={statusLabel(order.data.order.status)} />
+            </div>
             {order.data.order.comment ? (
-              <p className="mt-3 rounded-md bg-black/20 p-3 text-sm text-tg-hint">
+              <p className="mt-3 rounded-md border border-tg-border bg-black/20 p-3 text-sm text-tg-hint">
                 {order.data.order.comment}
               </p>
             ) : null}
           </Panel>
+
+          <PaymentSection order={order.data.order} onPaymentCreated={() => order.refetch()} />
 
           <Panel>
             <h2 className="font-semibold">История статусов</h2>
@@ -69,5 +78,14 @@ export default function OrderPage() {
         </>
       ) : null}
     </AppShell>
+  );
+}
+
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-start justify-between gap-3 rounded-md border border-tg-border bg-black/20 px-3 py-2">
+      <span className="text-tg-hint">{label}</span>
+      <span className="text-right font-medium">{value}</span>
+    </div>
   );
 }

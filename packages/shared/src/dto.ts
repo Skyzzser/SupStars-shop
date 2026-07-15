@@ -54,6 +54,7 @@ export type OrderDto = {
   totalUsd: number;
   items: OrderItemDto[];
   payments: PaymentDto[];
+  currentPayment: PaymentDto | null;
   statusHistory: OrderStatusHistoryDto[];
   createdAt: string;
   updatedAt: string;

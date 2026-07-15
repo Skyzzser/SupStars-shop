@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import express from "express";
-import { Bot, InputFile, webhookCallback, type Context } from "grammy";
+import { Bot, InlineKeyboard, InputFile, webhookCallback, type Context } from "grammy";
 import { BotApiError, createBotCryptoInvoice, createBotOrder, listBotOrders, type PaymentDto } from "./api.js";
 import { botHttpPort, canUseTelegramWebApp, env } from "./env.js";
 import {
@@ -243,6 +243,23 @@ function logBotApiError(message: string, error: unknown) {
   console.error(message, error);
 }
 
+function ordersWithPaymentKeyboard(orders: Array<{ orderNumber: string; currentPayment?: PaymentDto | null }>) {
+  const keyboard = new InlineKeyboard();
+  let hasPaymentButtons = false;
+
+  for (const order of orders) {
+    const payment = order.currentPayment;
+    if (payment?.payUrl && payment.asset && payment.status !== "paid") {
+      keyboard.url(`${order.orderNumber} · ${payment.asset}`, payment.payUrl).row();
+      hasPaymentButtons = true;
+    }
+  }
+
+  keyboard.text("Обновить", "orders:list").text("FAQ", "faq:open");
+
+  return hasPaymentButtons ? keyboard : storeInlineKeyboard();
+}
+
 async function showOrders(ctx: Context) {
   try {
     const { orders } = await listBotOrders(getTelegramUser(ctx));
@@ -257,12 +274,15 @@ async function showOrders(ctx: Context) {
       `Получатель: @${order.recipientUsername}`,
       `Сумма: ${order.totalRub} RUB`,
       `Статус: ${order.status}`,
+      order.currentPayment
+        ? `Оплата: ${order.currentPayment.status} ${order.currentPayment.asset ?? ""}`.trim()
+        : "Оплата: invoice ещё нет",
       "",
     ]);
 
     await ctx.reply(["<b>Ваши последние заказы</b>", "", ...lines].join("\n"), {
       parse_mode: "HTML",
-      reply_markup: storeInlineKeyboard(),
+      reply_markup: ordersWithPaymentKeyboard(orders.slice(0, 5)),
     });
   } catch (error) {
     logBotApiError("Failed to load bot orders", error);

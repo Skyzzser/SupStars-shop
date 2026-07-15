@@ -1,5 +1,5 @@
 import type { Order, OrderItem, OrderStatusHistory, Payment, Product, User } from "@prisma/client";
-import type { AdminOrderDto, OrderDto, ProductDto } from "@suupstars/shared";
+import type { AdminOrderDto, OrderDto, PaymentDto, ProductDto } from "@suupstars/shared";
 
 type OrderWithRelations = Order & {
   items: OrderItem[];
@@ -25,6 +25,8 @@ export function productToDto(product: Product): ProductDto {
 }
 
 export function orderToDto(order: OrderWithRelations): OrderDto {
+  const payments = order.payments.map(paymentToDto);
+
   return {
     id: order.id,
     orderNumber: order.orderNumber,
@@ -42,20 +44,11 @@ export function orderToDto(order: OrderWithRelations): OrderDto {
       totalRub: item.totalRub.toNumber(),
       totalUsd: item.totalUsd.toNumber(),
     })),
-    payments: order.payments.map((payment) => ({
-      id: payment.id,
-      provider: payment.provider,
-      providerPaymentId: payment.providerPaymentId,
-      status: payment.status,
-      asset: payment.asset === "USDT" || payment.asset === "TON" ? payment.asset : null,
-      amount: payment.amount?.toNumber() ?? null,
-      payUrl: payment.payUrl,
-      amountRub: payment.amountRub.toNumber(),
-      amountUsd: payment.amountUsd.toNumber(),
-      paidAt: payment.paidAt?.toISOString() ?? null,
-      createdAt: payment.createdAt.toISOString(),
-      updatedAt: payment.updatedAt.toISOString(),
-    })),
+    payments,
+    currentPayment:
+      payments.find((payment) => ["active", "pending"].includes(payment.status) && Boolean(payment.payUrl)) ??
+      payments[0] ??
+      null,
     statusHistory: order.statusHistory.map((entry) => ({
       id: entry.id,
       status: entry.status,
@@ -65,6 +58,23 @@ export function orderToDto(order: OrderWithRelations): OrderDto {
     })),
     createdAt: order.createdAt.toISOString(),
     updatedAt: order.updatedAt.toISOString(),
+  };
+}
+
+function paymentToDto(payment: Payment): PaymentDto {
+  return {
+    id: payment.id,
+    provider: payment.provider,
+    providerPaymentId: payment.providerPaymentId,
+    status: payment.status,
+    asset: payment.asset === "USDT" || payment.asset === "TON" ? payment.asset : null,
+    amount: payment.amount?.toNumber() ?? null,
+    payUrl: payment.payUrl,
+    amountRub: payment.amountRub.toNumber(),
+    amountUsd: payment.amountUsd.toNumber(),
+    paidAt: payment.paidAt?.toISOString() ?? null,
+    createdAt: payment.createdAt.toISOString(),
+    updatedAt: payment.updatedAt.toISOString(),
   };
 }
 
