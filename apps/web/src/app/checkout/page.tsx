@@ -72,7 +72,7 @@ function CheckoutContent() {
 
     try {
       const result = await createOrder.mutateAsync(input);
-      router.replace(`/orders/${result.order.id}`);
+      router.replace(`/checkout/payment?orderId=${result.order.id}`);
     } catch {
       // The mutation state renders a user-facing error below the form.
     }

@@ -7,6 +7,7 @@ import { prisma } from "./db/prisma.js";
 import { errorMiddleware } from "./middleware/error.js";
 import { adminRouter } from "./routes/admin.js";
 import { ordersRouter } from "./routes/orders.js";
+import { paymentsRouter } from "./routes/payments.js";
 import { productsRouter } from "./routes/products.js";
 
 export function createApp() {
@@ -29,7 +30,14 @@ export function createApp() {
       credentials: true,
     }),
   );
-  app.use(express.json({ limit: "1mb" }));
+  app.use(
+    express.json({
+      limit: "1mb",
+      verify: (req, _res, buf) => {
+        (req as Express.Request).rawBody = Buffer.from(buf);
+      },
+    }),
+  );
   app.use(morgan(env.NODE_ENV === "production" ? "combined" : "dev"));
 
   app.get("/health", async (_req, res) => {
@@ -39,6 +47,7 @@ export function createApp() {
 
   app.use("/products", productsRouter);
   app.use("/orders", ordersRouter);
+  app.use("/payments", paymentsRouter);
   app.use("/admin", adminRouter);
 
   app.use(errorMiddleware);

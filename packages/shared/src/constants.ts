@@ -17,3 +17,7 @@ export const ORDER_STATUSES = [
 ] as const;
 
 export const PRODUCT_TYPES = ["stars", "premium"] as const;
+
+export const CRYPTO_ASSETS = ["USDT", "TON"] as const;
+
+export const PAYMENT_STATUSES = ["pending", "active", "paid", "expired", "failed"] as const;

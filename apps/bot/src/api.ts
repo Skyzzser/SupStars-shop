@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { apiPublicUrl, env } from "./env.js";
 
 type ProductType = "stars" | "premium";
+type CryptoAsset = "USDT" | "TON";
 
 export type BotOrderInput = {
   productType: ProductType;
@@ -17,7 +18,17 @@ export type OrderDto = {
   recipientUsername: string;
   totalRub: number;
   totalUsd: number;
+  payments?: PaymentDto[];
   createdAt: string;
+};
+
+export type PaymentDto = {
+  id: string;
+  provider: string;
+  status: string;
+  asset: CryptoAsset | null;
+  amount: number | null;
+  payUrl: string | null;
 };
 
 type ApiErrorPayload = {
@@ -111,6 +122,16 @@ export async function createBotOrder(input: BotOrderInput, user: { id: number; u
   return apiFetch<{ order: OrderDto }>("/orders", user, {
     method: "POST",
     body: JSON.stringify(body),
+  });
+}
+
+export async function createBotCryptoInvoice(
+  input: { orderId: string; asset: CryptoAsset },
+  user: { id: number; username?: string; first_name?: string },
+) {
+  return apiFetch<{ order: OrderDto; payment: PaymentDto }>("/payments/crypto/create", user, {
+    method: "POST",
+    body: JSON.stringify(input),
   });
 }
 

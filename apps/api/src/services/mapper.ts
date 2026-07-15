@@ -1,8 +1,9 @@
-import type { Order, OrderItem, OrderStatusHistory, Product, User } from "@prisma/client";
+import type { Order, OrderItem, OrderStatusHistory, Payment, Product, User } from "@prisma/client";
 import type { AdminOrderDto, OrderDto, ProductDto } from "@suupstars/shared";
 
 type OrderWithRelations = Order & {
   items: OrderItem[];
+  payments: Payment[];
   statusHistory: OrderStatusHistory[];
 };
 
@@ -40,6 +41,20 @@ export function orderToDto(order: OrderWithRelations): OrderDto {
       quantity: item.quantity,
       totalRub: item.totalRub.toNumber(),
       totalUsd: item.totalUsd.toNumber(),
+    })),
+    payments: order.payments.map((payment) => ({
+      id: payment.id,
+      provider: payment.provider,
+      providerPaymentId: payment.providerPaymentId,
+      status: payment.status,
+      asset: payment.asset === "USDT" || payment.asset === "TON" ? payment.asset : null,
+      amount: payment.amount?.toNumber() ?? null,
+      payUrl: payment.payUrl,
+      amountRub: payment.amountRub.toNumber(),
+      amountUsd: payment.amountUsd.toNumber(),
+      paidAt: payment.paidAt?.toISOString() ?? null,
+      createdAt: payment.createdAt.toISOString(),
+      updatedAt: payment.updatedAt.toISOString(),
     })),
     statusHistory: order.statusHistory.map((entry) => ({
       id: entry.id,

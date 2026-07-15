@@ -10,6 +10,11 @@ const optionalUrl = z.preprocess(
   z.string().url().optional(),
 );
 
+const optionalString = z.preprocess(
+  (value) => (value === "" ? undefined : value),
+  z.string().optional(),
+);
+
 const booleanFromEnv = z.preprocess((value) => {
   if (typeof value !== "string") {
     return value;
@@ -25,10 +30,15 @@ const envSchema = z.object({
   BOT_TOKEN: z.string().min(1),
   WEB_APP_URL: z.string().url(),
   API_PUBLIC_URL: optionalUrl,
+  PUBLIC_WEB_URL: optionalUrl,
   CORS_ORIGINS: z.string().default(""),
   ADMIN_IDS: z.string().default(""),
   DEV_ALLOW_BROWSER: booleanFromEnv.default(false),
   SUPPORT_URL: optionalUrl,
+  CRYPTOBOT_API_TOKEN: optionalString,
+  CRYPTOBOT_API_URL: z.string().url().default("https://pay.crypt.bot"),
+  CRYPTOBOT_WEBHOOK_SECRET: optionalString,
+  CRYPTOBOT_INVOICE_EXPIRES_IN: z.coerce.number().int().min(1).max(2678400).default(3600),
 });
 
 export const env = envSchema.parse(process.env);

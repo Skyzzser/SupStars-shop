@@ -104,13 +104,19 @@ model Payment {
   provider          String
   providerPaymentId String?
   status            String
+  asset             String?
+  amount            Decimal? @db.Decimal(18, 8)
+  payUrl            String?
   amountRub         Decimal  @db.Decimal(12, 2)
   amountUsd         Decimal  @db.Decimal(12, 2)
   payload           Json?
+  rawWebhookPayload Json?
+  paidAt            DateTime?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
   @@index([provider, providerPaymentId])
+  @@index([orderId, status])
 }
 
 model OrderStatusHistory {

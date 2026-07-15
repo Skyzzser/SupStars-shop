@@ -7,11 +7,13 @@ import { notifyAdmins, notifyUser } from "./telegram-notifier.js";
 
 const orderInclude = Prisma.validator<Prisma.OrderInclude>()({
   items: true,
+  payments: { orderBy: { createdAt: "desc" } },
   statusHistory: { orderBy: { createdAt: "asc" } },
 });
 
 const adminOrderInclude = Prisma.validator<Prisma.OrderInclude>()({
   items: true,
+  payments: { orderBy: { createdAt: "desc" } },
   statusHistory: { orderBy: { createdAt: "asc" } },
   user: true,
 });
@@ -64,7 +66,6 @@ export async function createOrder(input: CreateOrderRequest, user: User) {
         totalRub: price.totalRub,
         totalUsd: price.totalUsd,
         idempotencyKey: input.idempotencyKey,
-        providerName: "manual",
         items: {
           create: {
             productId: product.id,
@@ -86,19 +87,6 @@ export async function createOrder(input: CreateOrderRequest, user: User) {
         },
       },
       include: orderInclude,
-    });
-
-    await tx.payment.create({
-      data: {
-        orderId: created.id,
-        provider: "manual",
-        status: "awaiting_confirmation",
-        amountRub: price.totalRub,
-        amountUsd: price.totalUsd,
-        payload: {
-          instructions: "Manual admin payment confirmation required",
-        },
-      },
     });
 
     return created;

@@ -45,6 +45,20 @@ export function commentInlineKeyboard() {
   return new InlineKeyboard().text("Пропустить", "comment:skip").text("Отмена", "order:cancel");
 }
 
+export function cryptoInvoiceInlineKeyboard(payments: Array<{ asset: string | null; payUrl: string | null }>) {
+  const keyboard = new InlineKeyboard();
+
+  for (const payment of payments) {
+    if (payment.asset && payment.payUrl) {
+      keyboard.url(`Оплатить ${payment.asset}`, payment.payUrl).row();
+    }
+  }
+
+  keyboard.text("Мои заказы", "orders:list").text("FAQ", "faq:open");
+
+  return keyboard;
+}
+
 export function supportInlineKeyboard() {
   const keyboard = canUseTelegramWebApp()
     ? new InlineKeyboard().webApp("FAQ в Mini App", appUrl("/support"))

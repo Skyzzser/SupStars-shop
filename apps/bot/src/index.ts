@@ -2,10 +2,11 @@ import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import express from "express";
 import { Bot, InputFile, webhookCallback, type Context } from "grammy";
-import { BotApiError, createBotOrder, listBotOrders } from "./api.js";
+import { BotApiError, createBotCryptoInvoice, createBotOrder, listBotOrders, type PaymentDto } from "./api.js";
 import { botHttpPort, canUseTelegramWebApp, env } from "./env.js";
 import {
   commentInlineKeyboard,
+  cryptoInvoiceInlineKeyboard,
   mainReplyKeyboard,
   quantityInlineKeyboard,
   storeInlineKeyboard,
@@ -153,6 +154,27 @@ async function askRecipient(ctx: Context, quantity: number) {
   await ctx.reply("Кому отправить заказ? Отправьте @username или Telegram ID получателя.");
 }
 
+async function createCryptoInvoicesForOrder(
+  orderId: string,
+  user: { id: number; username?: string; first_name?: string },
+) {
+  const results = await Promise.allSettled([
+    createBotCryptoInvoice({ orderId, asset: "USDT" }, user),
+    createBotCryptoInvoice({ orderId, asset: "TON" }, user),
+  ]);
+
+  const payments: PaymentDto[] = [];
+  for (const result of results) {
+    if (result.status === "fulfilled") {
+      payments.push(result.value.payment);
+    } else {
+      logBotApiError("Failed to create crypto invoice", result.reason);
+    }
+  }
+
+  return payments;
+}
+
 async function createOrderFromDraft(
   ctx: Context,
   comment = "",
@@ -179,6 +201,7 @@ async function createOrderFromDraft(
     );
 
     drafts.delete(userId);
+    const payments = await createCryptoInvoicesForOrder(order.id, getTelegramUser(ctx));
 
     await ctx.reply(
       [
@@ -189,11 +212,13 @@ async function createOrderFromDraft(
         `Сумма: <b>${order.totalRub} RUB</b>`,
         `Статус: <b>${order.status}</b>`,
         "",
-        "Администратор проверит оплату и обновит статус заказа.",
+        payments.length > 0
+          ? "Выберите счет Crypto Bot для оплаты. Статус изменится после подтверждения webhook."
+          : "Заказ создан, но счета Crypto Bot не удалось создать. Напишите в поддержку или попробуйте позже.",
       ].join("\n"),
       {
         parse_mode: "HTML",
-        reply_markup: storeInlineKeyboard(),
+        reply_markup: payments.length > 0 ? cryptoInvoiceInlineKeyboard(payments) : storeInlineKeyboard(),
       },
     );
   } catch (error) {

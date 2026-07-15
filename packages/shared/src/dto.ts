@@ -1,4 +1,4 @@
-import type { OrderStatus, ProductType } from "./schemas.js";
+import type { CryptoAsset, OrderStatus, ProductType } from "./schemas.js";
 
 export type ProductDto = {
   id: string;
@@ -28,6 +28,21 @@ export type OrderStatusHistoryDto = {
   actorTelegramId: string | null;
 };
 
+export type PaymentDto = {
+  id: string;
+  provider: string;
+  providerPaymentId: string | null;
+  status: string;
+  asset: CryptoAsset | null;
+  amount: number | null;
+  payUrl: string | null;
+  amountRub: number;
+  amountUsd: number;
+  paidAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type OrderDto = {
   id: string;
   orderNumber: string;
@@ -38,6 +53,7 @@ export type OrderDto = {
   totalRub: number;
   totalUsd: number;
   items: OrderItemDto[];
+  payments: PaymentDto[];
   statusHistory: OrderStatusHistoryDto[];
   createdAt: string;
   updatedAt: string;

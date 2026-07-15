@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { CreateOrderRequest, OrderStatus, UpdateOrderStatusRequest } from "@suupstars/shared";
+import type { CreateCryptoInvoiceRequest, CreateOrderRequest, OrderStatus, UpdateOrderStatusRequest } from "@suupstars/shared";
 import { api } from "@/lib/api";
 
 export function useProducts() {
@@ -18,12 +18,14 @@ export function useMyOrders() {
   });
 }
 
-export function useOrder(id: string) {
-  return useQuery({
+export function useOrder(id: string, refetchInterval?: number | false) {
+  const options = {
     queryKey: ["orders", id],
     queryFn: () => api.order(id),
     enabled: Boolean(id),
-  });
+  };
+
+  return useQuery(refetchInterval === undefined ? options : { ...options, refetchInterval });
 }
 
 export function useCreateOrder() {
@@ -32,6 +34,18 @@ export function useCreateOrder() {
   return useMutation({
     mutationFn: (input: CreateOrderRequest) => api.createOrder(input),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["orders"] }),
+  });
+}
+
+export function useCreateCryptoInvoice() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: CreateCryptoInvoiceRequest) => api.createCryptoInvoice(input),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.setQueryData(["orders", data.order.id], { order: data.order });
+    },
   });
 }
 

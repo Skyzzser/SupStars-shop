@@ -1,5 +1,5 @@
-import type { AdminOrderDto, OrderDto, ProductDto } from "@suupstars/shared";
-import type { CreateOrderRequest, OrderStatus, UpdateOrderStatusRequest } from "@suupstars/shared";
+import type { AdminOrderDto, OrderDto, PaymentDto, ProductDto } from "@suupstars/shared";
+import type { CreateCryptoInvoiceRequest, CreateOrderRequest, OrderStatus, UpdateOrderStatusRequest } from "@suupstars/shared";
 import { getTelegramInitData } from "./telegram";
 
 const API_URL = normalizeApiUrl(process.env.NEXT_PUBLIC_API_URL);
@@ -103,6 +103,11 @@ export const api = {
   products: () => apiFetch<{ products: ProductDto[] }>("/products"),
   createOrder: (input: CreateOrderRequest) =>
     apiFetch<{ order: OrderDto }>("/orders", {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
+  createCryptoInvoice: (input: CreateCryptoInvoiceRequest) =>
+    apiFetch<{ order: OrderDto; payment: PaymentDto }>("/payments/crypto/create", {
       method: "POST",
       body: JSON.stringify(input),
     }),
