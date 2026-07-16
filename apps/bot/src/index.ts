@@ -1,8 +1,17 @@
-﻿import { existsSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import express from "express";
 import { Bot, InlineKeyboard, InputFile, webhookCallback, type Context } from "grammy";
-import { BotApiError, confirmBotManualWalletPayment, createBotCryptoInvoice, createBotManualWalletPayment, createBotOrder, listBotOrders, type PaymentDto } from "./api.js";
+import {
+  BotApiError,
+  adminVerifyBotManualWalletPayment,
+  confirmBotManualWalletPayment,
+  createBotCryptoInvoice,
+  createBotManualWalletPayment,
+  createBotOrder,
+  listBotOrders,
+  type PaymentDto,
+} from "./api.js";
 import { botHttpPort, botWebhookPath, botWebhookUrl, canUseTelegramWebApp, env } from "./env.js";
 import {
   commentInlineKeyboard,
@@ -31,12 +40,20 @@ const drafts = new Map<number, Draft>();
 const manualPaymentDrafts = new Map<number, string>();
 
 const commands = [
-  { command: "start", description: "РћС‚РєСЂС‹С‚СЊ РіР»Р°РІРЅРѕРµ РјРµРЅСЋ" },
-  { command: "shop", description: "РћС‚РєСЂС‹С‚СЊ РјР°РіР°Р·РёРЅ" },
-  { command: "orders", description: "РњРѕРё Р·Р°РєР°Р·С‹" },
+  { command: "start", description: "Открыть главное меню" },
+  { command: "shop", description: "Открыть магазин" },
+  { command: "orders", description: "Мои заказы" },
   { command: "faq", description: "FAQ" },
-  { command: "support", description: "РџРѕРґРґРµСЂР¶РєР°" },
+  { command: "support", description: "Поддержка" },
 ] as const;
+
+process.on("unhandledRejection", (reason) => {
+  console.error("Unhandled rejection in bot process", reason);
+});
+
+process.on("uncaughtException", (error) => {
+  console.error("Uncaught exception in bot process", error);
+});
 
 function getUserId(ctx: Context) {
   return ctx.from?.id;
@@ -47,9 +64,7 @@ function getTelegramUser(ctx: Context) {
     throw new Error("Telegram user is missing");
   }
 
-  const user: { id: number; username?: string; first_name?: string } = {
-    id: ctx.from.id,
-  };
+  const user: { id: number; username?: string; first_name?: string } = { id: ctx.from.id };
 
   if (ctx.from.username) {
     user.username = ctx.from.username;
@@ -77,12 +92,15 @@ function normalizeRecipient(value: string) {
 
 function parseStarsQuantity(value: string) {
   const quantity = Number(value.trim());
+  return Number.isInteger(quantity) && quantity >= 50 ? quantity : null;
+}
 
-  if (!Number.isInteger(quantity) || quantity < 50) {
-    return null;
+async function safeReply(ctx: Context, text: string, options?: Parameters<Context["reply"]>[1]) {
+  try {
+    await ctx.reply(text, options);
+  } catch (error) {
+    console.error("Failed to send bot reply", error);
   }
-
-  return quantity;
 }
 
 async function sendStart(ctx: Context) {
@@ -97,70 +115,43 @@ async function sendStart(ctx: Context) {
       });
     } catch (error) {
       console.error("Failed to send start banner", error);
-      await ctx.reply(welcomeMessage, {
-        parse_mode: "HTML",
-        reply_markup: mainReplyKeyboard(),
-      });
+      await safeReply(ctx, welcomeMessage, { parse_mode: "HTML", reply_markup: mainReplyKeyboard() });
     }
   } else {
-    await ctx.reply(welcomeMessage, {
-      parse_mode: "HTML",
-      reply_markup: mainReplyKeyboard(),
-    });
+    await safeReply(ctx, welcomeMessage, { parse_mode: "HTML", reply_markup: mainReplyKeyboard() });
   }
 
-  await ctx.reply("Р’С‹Р±РµСЂРёС‚Рµ, С‡С‚Рѕ С…РѕС‚РёС‚Рµ РєСѓРїРёС‚СЊ:", {
-    reply_markup: storeInlineKeyboard(),
-  });
+  await safeReply(ctx, "Выберите, что хотите купить:", { reply_markup: storeInlineKeyboard() });
 }
 
 async function startStarsOrder(ctx: Context) {
   const userId = getUserId(ctx);
-  if (!userId) {
-    return;
-  }
+  if (!userId) return;
 
-  drafts.set(userId, {
-    productType: "stars",
-    step: "quantity",
-    quantity: 50,
-  });
-
-  await ctx.reply("РЎРєРѕР»СЊРєРѕ Telegram Stars С…РѕС‚РёС‚Рµ РєСѓРїРёС‚СЊ? РњРёРЅРёРјСѓРј 50. РњРѕР¶РЅРѕ РЅР°РїРёСЃР°С‚СЊ С‡РёСЃР»Рѕ РёР»Рё РІС‹Р±СЂР°С‚СЊ РєРЅРѕРїРєСѓ:", {
+  drafts.set(userId, { productType: "stars", step: "quantity", quantity: 50 });
+  await safeReply(ctx, "Сколько Telegram Stars хотите купить? Минимум 50. Можно написать число или выбрать кнопку:", {
     reply_markup: quantityInlineKeyboard(),
   });
 }
 
 async function startPremiumOrder(ctx: Context) {
   const userId = getUserId(ctx);
-  if (!userId) {
-    return;
-  }
+  if (!userId) return;
 
-  drafts.set(userId, {
-    productType: "premium",
-    step: "recipient",
-    quantity: 1,
-  });
-
-  await ctx.reply("РљРѕРјСѓ РѕС„РѕСЂРјРёС‚СЊ Telegram Premium? РћС‚РїСЂР°РІСЊС‚Рµ @username РёР»Рё Telegram ID РїРѕР»СѓС‡Р°С‚РµР»СЏ.");
+  drafts.set(userId, { productType: "premium", step: "recipient", quantity: 1 });
+  await safeReply(ctx, "Кому оформить Telegram Premium? Отправьте @username или Telegram ID получателя.");
 }
 
 async function askRecipient(ctx: Context, quantity: number) {
   const userId = getUserId(ctx);
   const draft = userId ? drafts.get(userId) : undefined;
-  if (!userId || !draft) {
-    return;
-  }
+  if (!userId || !draft) return;
 
   drafts.set(userId, { ...draft, quantity, step: "recipient" });
-  await ctx.reply("РљРѕРјСѓ РѕС‚РїСЂР°РІРёС‚СЊ Р·Р°РєР°Р·? РћС‚РїСЂР°РІСЊС‚Рµ @username РёР»Рё Telegram ID РїРѕР»СѓС‡Р°С‚РµР»СЏ.");
+  await safeReply(ctx, "Кому отправить заказ? Отправьте @username или Telegram ID получателя.");
 }
 
-async function createCryptoInvoicesForOrder(
-  orderId: string,
-  user: { id: number; username?: string; first_name?: string },
-) {
+async function createCryptoInvoicesForOrder(orderId: string, user: { id: number; username?: string; first_name?: string }) {
   const results = await Promise.allSettled([
     createBotCryptoInvoice({ orderId, asset: "USDT" }, user),
     createBotCryptoInvoice({ orderId, asset: "TON" }, user),
@@ -178,21 +169,19 @@ async function createCryptoInvoicesForOrder(
   return payments;
 }
 
-
 async function sendCryptoPaymentOptions(ctx: Context, orderId: string) {
   try {
     const payments = await createCryptoInvoicesForOrder(orderId, getTelegramUser(ctx));
-    await ctx.reply(
+    await safeReply(
+      ctx,
       payments.length > 0
-        ? "Choose a Crypto Bot invoice. Order becomes paid only after Crypto Pay webhook confirmation."
-        : "Crypto Bot invoices could not be created. Try wallet transfer or contact support.",
-      {
-        reply_markup: payments.length > 0 ? cryptoInvoiceInlineKeyboard(payments) : storeInlineKeyboard(),
-      },
+        ? "Выберите счет Crypto Bot. Заказ станет оплаченным только после webhook-подтверждения."
+        : "Не удалось создать счета Crypto Bot. Попробуйте перевод на кошелек или напишите в поддержку.",
+      { reply_markup: payments.length > 0 ? cryptoInvoiceInlineKeyboard(payments) : storeInlineKeyboard() },
     );
   } catch (error) {
     logBotApiError("Failed to create crypto payment options", error);
-    await ctx.reply("Could not create Crypto Bot invoices. Try again later or use wallet transfer.", {
+    await safeReply(ctx, "Не удалось создать Crypto Bot invoice. Попробуйте позже или выберите перевод на кошелек.", {
       reply_markup: storeInlineKeyboard(),
     });
   }
@@ -201,13 +190,13 @@ async function sendCryptoPaymentOptions(ctx: Context, orderId: string) {
 async function sendManualWalletPayment(ctx: Context, orderId: string) {
   try {
     const { order, payment } = await createBotManualWalletPayment({ orderId }, getTelegramUser(ctx));
-    await ctx.reply(formatManualWalletMessage(order.orderNumber, payment), {
+    await safeReply(ctx, formatManualWalletMessage(order.orderNumber, payment), {
       parse_mode: "HTML",
       reply_markup: manualWalletInlineKeyboard(payment.id),
     });
   } catch (error) {
     logBotApiError("Failed to create manual wallet payment", error);
-    await ctx.reply("Could not prepare wallet transfer details. Check support or try Crypto Bot.", {
+    await safeReply(ctx, "Не удалось подготовить реквизиты кошелька. Напишите в поддержку или попробуйте Crypto Bot.", {
       reply_markup: storeInlineKeyboard(),
     });
   }
@@ -216,84 +205,67 @@ async function sendManualWalletPayment(ctx: Context, orderId: string) {
 function formatManualWalletMessage(orderNumber: string, payment: PaymentDto) {
   const wallet = payment.manualWallet;
   if (!wallet) {
-    return "Wallet details are unavailable. Contact support.";
+    return "Реквизиты кошелька недоступны. Напишите в поддержку.";
   }
 
   return [
-    "<b>Wallet transfer</b>",
+    "<b>Перевод на кошелек</b>",
     "",
-    `Order: <b>${orderNumber}</b>`,
-    `Network: <b>${wallet.network}</b>`,
-    `Asset: <b>${wallet.asset}</b>`,
-    `Amount: <b>${payment.amount ?? payment.amountUsd ?? ""} ${payment.asset ?? wallet.asset}</b>`,
-    `Address: <code>${wallet.address}</code>`,
+    `Заказ: <b>${orderNumber}</b>`,
+    `Сеть: <b>${wallet.network}</b>`,
+    `Монета: <b>${wallet.asset}</b>`,
+    `Сумма: <b>${payment.amount ?? payment.amountUsd ?? ""} ${payment.asset ?? wallet.asset}</b>`,
+    `Адрес: <code>${wallet.address}</code>`,
     wallet.memo ? `Memo: <code>${wallet.memo}</code>` : "",
-    wallet.instructions ? `Note: ${wallet.instructions}` : "",
+    wallet.instructions ? `Важно: ${wallet.instructions}` : "",
     "",
-    "After transfer, tap <b>I paid</b> and send tx hash / transaction id. Order becomes paid only after admin approval.",
+    "После перевода нажмите <b>Я оплатил</b> и отправьте tx hash / transaction id. Заказ станет оплаченным только после проверки администратором.",
   ]
     .filter(Boolean)
     .join("\n");
 }
-async function createOrderFromDraft(
-  ctx: Context,
-  comment = "",
-) {
+
+async function createOrderFromDraft(ctx: Context, comment = "") {
   const userId = getUserId(ctx);
   const draft = userId ? drafts.get(userId) : undefined;
 
   if (!userId || !draft || !draft.recipient) {
-    await ctx.reply("Р—Р°РєР°Р· РЅРµ РЅР°Р№РґРµРЅ. РќР°С‡РЅРёС‚Рµ Р·Р°РЅРѕРІРѕ С‡РµСЂРµР· РєРЅРѕРїРєСѓ В«РљСѓРїРёС‚СЊ Р·РІС‘Р·РґС‹В» РёР»Рё В«РљСѓРїРёС‚СЊ PremiumВ».", {
-      reply_markup: storeInlineKeyboard(),
-    });
+    await safeReply(ctx, "Заказ не найден. Начните заново через кнопку покупки.", { reply_markup: storeInlineKeyboard() });
     return;
   }
 
   try {
     const { order } = await createBotOrder(
-      {
-        productType: draft.productType,
-        quantity: draft.quantity,
-        recipient: draft.recipient,
-        comment,
-      },
+      { productType: draft.productType, quantity: draft.quantity, recipient: draft.recipient, comment },
       getTelegramUser(ctx),
     );
 
     drafts.delete(userId);
-
-    await ctx.reply(
+    await safeReply(
+      ctx,
       [
-        "✅ <b>Order created</b>",
+        "✅ <b>Заказ создан</b>",
         "",
-        `Number: <b>${order.orderNumber}</b>`,
-        `Recipient: @${order.recipientUsername}`,
-        `Amount: <b>${order.totalRub} RUB / ${order.totalUsd} USD</b>`,
-        `Status: <b>${order.status}</b>`,
+        `Номер: <b>${order.orderNumber}</b>`,
+        `Получатель: @${order.recipientUsername}`,
+        `Сумма: <b>${order.totalRub} RUB / ${order.totalUsd} USD</b>`,
+        `Статус: <b>${order.status}</b>`,
         "",
-        "Choose payment method:",
+        "Выберите способ оплаты:",
       ].join("\n"),
-      {
-        parse_mode: "HTML",
-        reply_markup: paymentMethodInlineKeyboard(order.id),
-      },
+      { parse_mode: "HTML", reply_markup: paymentMethodInlineKeyboard(order.id) },
     );
   } catch (error) {
     logBotApiError("Failed to create bot order", error);
-    await ctx.reply(
-      "РќРµ РїРѕР»СѓС‡РёР»РѕСЃСЊ СЃРѕР·РґР°С‚СЊ Р·Р°РєР°Р·. РњС‹ СѓР¶Рµ Р·Р°РїРёСЃР°Р»Рё РїСЂРёС‡РёРЅСѓ РІ Р»РѕРіР°С… Р±РѕС‚Р°. РџРѕРїСЂРѕР±СѓР№С‚Рµ РµС‰Рµ СЂР°Р· С‡СѓС‚СЊ РїРѕР·Р¶Рµ РёР»Рё РЅР°РїРёС€РёС‚Рµ РІ РїРѕРґРґРµСЂР¶РєСѓ.",
-      { reply_markup: storeInlineKeyboard() },
-    );
+    await safeReply(ctx, "Не удалось создать заказ. Попробуйте позже или напишите в поддержку.", {
+      reply_markup: storeInlineKeyboard(),
+    });
   }
 }
 
 function logBotApiError(message: string, error: unknown) {
   if (error instanceof BotApiError) {
-    console.error(message, {
-      status: error.status,
-      code: error.code,
-      detail: error.message,
-    });
+    console.error(message, { status: error.status, code: error.code, detail: error.message });
     return;
   }
 
@@ -310,124 +282,79 @@ function ordersWithPaymentKeyboard(orders: Array<{ orderNumber: string; currentP
       keyboard.url(`${order.orderNumber} · ${payment.asset}`, payment.payUrl).row();
       hasPaymentButtons = true;
     } else if (payment?.provider === "manual_wallet_transfer" && payment.status !== "paid") {
-      keyboard.text(`${order.orderNumber} · I paid`, `manual:paid:${payment.id}`).row();
+      keyboard.text(`${order.orderNumber} · Я оплатил`, `manual:paid:${payment.id}`).row();
       hasPaymentButtons = true;
     }
   }
 
-  keyboard.text("Refresh", "orders:list");
-
+  keyboard.text("Обновить", "orders:list");
   return hasPaymentButtons ? keyboard : storeInlineKeyboard();
 }
+
 async function showOrders(ctx: Context) {
   try {
     const { orders } = await listBotOrders(getTelegramUser(ctx));
 
     if (orders.length === 0) {
-      await ctx.reply("РЈ РІР°СЃ РїРѕРєР° РЅРµС‚ Р·Р°РєР°Р·РѕРІ.", { reply_markup: storeInlineKeyboard() });
+      await safeReply(ctx, "У вас пока нет заказов.", { reply_markup: storeInlineKeyboard() });
       return;
     }
 
     const lines = orders.slice(0, 5).flatMap((order) => [
       `<b>${order.orderNumber}</b>`,
-      `РџРѕР»СѓС‡Р°С‚РµР»СЊ: @${order.recipientUsername}`,
-      `Amount: ${order.totalRub} RUB / ${order.totalUsd} USD`,
-      `РЎС‚Р°С‚СѓСЃ: ${order.status}`,
+      `Получатель: @${order.recipientUsername}`,
+      `Сумма: ${order.totalRub} RUB / ${order.totalUsd} USD`,
+      `Статус: ${order.status}`,
       order.currentPayment
-        ? `РћРїР»Р°С‚Р°: ${order.currentPayment.status} ${order.currentPayment.asset ?? ""}`.trim()
-        : "РћРїР»Р°С‚Р°: invoice РµС‰С‘ РЅРµС‚",
+        ? `Оплата: ${order.currentPayment.status} ${order.currentPayment.asset ?? ""}`.trim()
+        : "Оплата: еще не выбрана",
       "",
     ]);
 
-    await ctx.reply(["<b>Р’Р°С€Рё РїРѕСЃР»РµРґРЅРёРµ Р·Р°РєР°Р·С‹</b>", "", ...lines].join("\n"), {
+    await safeReply(ctx, ["<b>Ваши последние заказы</b>", "", ...lines].join("\n"), {
       parse_mode: "HTML",
       reply_markup: ordersWithPaymentKeyboard(orders.slice(0, 5)),
     });
   } catch (error) {
     logBotApiError("Failed to load bot orders", error);
-    await ctx.reply("РќРµ РїРѕР»СѓС‡РёР»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ Р·Р°РєР°Р·С‹. РџРѕРїСЂРѕР±СѓР№С‚Рµ РµС‰Рµ СЂР°Р· С‡СѓС‚СЊ РїРѕР·Р¶Рµ.", {
-      reply_markup: storeInlineKeyboard(),
-    });
+    await safeReply(ctx, "Не удалось загрузить заказы. Попробуйте позже.", { reply_markup: storeInlineKeyboard() });
   }
 }
 
-bot.command("start", async (ctx) => {
-  await sendStart(ctx);
-});
+async function handleAdminManualVerification(ctx: Context, action: "approve" | "reject", paymentId: string) {
+  try {
+    const result = await adminVerifyBotManualWalletPayment({ paymentId, action }, getTelegramUser(ctx));
+    await ctx.answerCallbackQuery(action === "approve" ? "Оплата подтверждена" : "Оплата отклонена");
+    await safeReply(
+      ctx,
+      `${action === "approve" ? "✅" : "❌"} Manual wallet payment обновлен.\nЗаказ: <b>${result.order.orderNumber}</b>\nСтатус: <b>${result.order.status}</b>`,
+      { parse_mode: "HTML" },
+    );
+  } catch (error) {
+    logBotApiError("Failed to verify manual wallet payment from admin callback", error);
+    await ctx.answerCallbackQuery({ text: "Не удалось выполнить действие. Проверьте права админа.", show_alert: true }).catch(() => undefined);
+  }
+}
 
-bot.command("shop", async (ctx) => {
-  await ctx.reply("Р’С‹Р±РµСЂРёС‚Рµ, С‡С‚Рѕ С…РѕС‚РёС‚Рµ РєСѓРїРёС‚СЊ:", {
-    reply_markup: storeInlineKeyboard(),
-  });
-});
+bot.command("start", sendStart);
+bot.command("shop", async (ctx) => safeReply(ctx, "Выберите, что хотите купить:", { reply_markup: storeInlineKeyboard() }));
+bot.command("orders", showOrders);
+bot.command("faq", async (ctx) => safeReply(ctx, faqMessage, { parse_mode: "HTML", reply_markup: supportInlineKeyboard() }));
+bot.command("support", async (ctx) => safeReply(ctx, supportMessage, { parse_mode: "HTML", reply_markup: supportInlineKeyboard() }));
 
-bot.command("orders", async (ctx) => {
-  await showOrders(ctx);
+bot.hears(["Открыть магазин", "Buy Stars", "Купить Stars", "Купить звезды", "Купить звёзды"], async (ctx) => {
+  const text = ctx.message?.text ?? "";
+  if (text === "Buy Stars" || text.includes("зв")) {
+    await startStarsOrder(ctx);
+    return;
+  }
+  await safeReply(ctx, "Выберите, что хотите купить:", { reply_markup: storeInlineKeyboard() });
 });
+bot.hears(["Buy Premium", "Купить Premium"], startPremiumOrder);
+bot.hears(["My orders", "Мои заказы"], showOrders);
+bot.hears(["Support", "Поддержка"], async (ctx) => safeReply(ctx, supportMessage, { parse_mode: "HTML", reply_markup: supportInlineKeyboard() }));
+bot.hears("FAQ", async (ctx) => safeReply(ctx, faqMessage, { parse_mode: "HTML", reply_markup: supportInlineKeyboard() }));
 
-bot.command("faq", async (ctx) => {
-  await ctx.reply(faqMessage, {
-    parse_mode: "HTML",
-    reply_markup: supportInlineKeyboard(),
-  });
-});
-
-bot.command("support", async (ctx) => {
-  await ctx.reply(supportMessage, {
-    parse_mode: "HTML",
-    reply_markup: supportInlineKeyboard(),
-  });
-});
-
-bot.hears("РћС‚РєСЂС‹С‚СЊ РјР°РіР°Р·РёРЅ", async (ctx) => {
-  await ctx.reply("Р’С‹Р±РµСЂРёС‚Рµ, С‡С‚Рѕ С…РѕС‚РёС‚Рµ РєСѓРїРёС‚СЊ:", { reply_markup: storeInlineKeyboard() });
-});
-
-bot.hears("РљСѓРїРёС‚СЊ Р·РІС‘Р·РґС‹", async (ctx) => {
-  await startStarsOrder(ctx);
-});
-
-bot.hears("РљСѓРїРёС‚СЊ Premium", async (ctx) => {
-  await startPremiumOrder(ctx);
-});
-
-bot.hears("РњРѕРё Р·Р°РєР°Р·С‹", async (ctx) => {
-  await showOrders(ctx);
-});
-
-bot.hears("FAQ", async (ctx) => {
-  await ctx.reply(faqMessage, {
-    parse_mode: "HTML",
-    reply_markup: supportInlineKeyboard(),
-  });
-});
-
-bot.hears("РџРѕРґРґРµСЂР¶РєР°", async (ctx) => {
-  await ctx.reply(supportMessage, {
-    parse_mode: "HTML",
-    reply_markup: supportInlineKeyboard(),
-  });
-});
-
-
-bot.hears("Buy Stars", async (ctx) => {
-  await startStarsOrder(ctx);
-});
-
-bot.hears("Buy Premium", async (ctx) => {
-  await startPremiumOrder(ctx);
-});
-
-bot.hears("My orders", async (ctx) => {
-  await showOrders(ctx);
-});
-
-bot.hears("Support", async (ctx) => {
-  await ctx.reply(supportMessage, {
-    parse_mode: "HTML",
-    reply_markup: supportInlineKeyboard(),
-  });
-});
 bot.callbackQuery("buy:stars", async (ctx) => {
   await ctx.answerCallbackQuery();
   await startStarsOrder(ctx);
@@ -445,46 +372,47 @@ bot.callbackQuery("orders:list", async (ctx) => {
 
 bot.callbackQuery("faq:open", async (ctx) => {
   await ctx.answerCallbackQuery();
-  await ctx.reply(faqMessage, {
-    parse_mode: "HTML",
-    reply_markup: supportInlineKeyboard(),
-  });
+  await safeReply(ctx, faqMessage, { parse_mode: "HTML", reply_markup: supportInlineKeyboard() });
 });
-
 
 bot.callbackQuery(/^pay:crypto:(.+)$/, async (ctx) => {
   await ctx.answerCallbackQuery();
   const orderId = ctx.match[1];
-  if (!orderId) return;
-  await sendCryptoPaymentOptions(ctx, orderId);
+  if (orderId) await sendCryptoPaymentOptions(ctx, orderId);
 });
 
 bot.callbackQuery(/^pay:wallet:(.+)$/, async (ctx) => {
   await ctx.answerCallbackQuery();
   const orderId = ctx.match[1];
-  if (!orderId) return;
-  await sendManualWalletPayment(ctx, orderId);
+  if (orderId) await sendManualWalletPayment(ctx, orderId);
 });
 
 bot.callbackQuery(/^manual:paid:(.+)$/, async (ctx) => {
   await ctx.answerCallbackQuery();
   const userId = getUserId(ctx);
   const paymentId = ctx.match[1];
-  if (!userId || !paymentId) {
-    return;
-  }
+  if (!userId || !paymentId) return;
 
   manualPaymentDrafts.set(userId, paymentId);
-  await ctx.reply("Send tx hash / transaction id for this transfer. If you do not have it, send '-' and admin will verify manually.");
+  await safeReply(ctx, "Отправьте tx hash / transaction id. Если его нет, отправьте '-' и администратор проверит перевод вручную.");
 });
+
+bot.callbackQuery(/^admin:manual:(approve|reject):(.+)$/, async (ctx) => {
+  const action = ctx.match[1] as "approve" | "reject" | undefined;
+  const paymentId = ctx.match[2];
+  if (!action || !paymentId) return;
+  await handleAdminManualVerification(ctx, action, paymentId);
+});
+
 bot.callbackQuery("order:cancel", async (ctx) => {
   const userId = getUserId(ctx);
   if (userId) {
     drafts.delete(userId);
+    manualPaymentDrafts.delete(userId);
   }
 
-  await ctx.answerCallbackQuery("Р—Р°РєР°Р· РѕС‚РјРµРЅС‘РЅ");
-  await ctx.reply("РћС„РѕСЂРјР»РµРЅРёРµ РѕС‚РјРµРЅРµРЅРѕ.", { reply_markup: storeInlineKeyboard() });
+  await ctx.answerCallbackQuery("Заказ отменен");
+  await safeReply(ctx, "Оформление отменено.", { reply_markup: storeInlineKeyboard() });
 });
 
 bot.callbackQuery("comment:skip", async (ctx) => {
@@ -508,49 +436,40 @@ bot.on("message:text", async (ctx) => {
       const txHash = text === "-" ? "" : text;
       const { order } = await confirmBotManualWalletPayment({ paymentId: manualPaymentId, txHash }, getTelegramUser(ctx));
       manualPaymentDrafts.delete(userId);
-      await ctx.reply(
-        `Payment submitted for order <b>${order.orderNumber}</b>. Status: <b>${order.status}</b>. Admin will verify it manually.`,
+      await safeReply(
+        ctx,
+        `Платеж отправлен на проверку.\nЗаказ: <b>${order.orderNumber}</b>\nСтатус: <b>${order.status}</b>`,
         { parse_mode: "HTML", reply_markup: storeInlineKeyboard() },
       );
     } catch (error) {
       logBotApiError("Failed to submit manual wallet payment", error);
-      await ctx.reply("Could not submit payment confirmation. Try again or contact support.");
+      await safeReply(ctx, "Не удалось отправить подтверждение оплаты. Попробуйте еще раз или напишите в поддержку.");
     }
     return;
   }
 
   const draft = userId ? drafts.get(userId) : undefined;
-
-  if (!userId || !draft) {
-    return;
-  }
+  if (!userId || !draft) return;
 
   if (draft.step === "quantity") {
     const quantity = parseStarsQuantity(text);
-
     if (!quantity) {
-      await ctx.reply("Р’РІРµРґРёС‚Рµ С†РµР»РѕРµ С‡РёСЃР»Рѕ РѕС‚ 50 РёР»Рё РІС‹Р±РµСЂРёС‚Рµ РіРѕС‚РѕРІРѕРµ РєРѕР»РёС‡РµСЃС‚РІРѕ:", {
-        reply_markup: quantityInlineKeyboard(),
-      });
+      await safeReply(ctx, "Введите целое число от 50 или выберите готовое количество:", { reply_markup: quantityInlineKeyboard() });
       return;
     }
-
     await askRecipient(ctx, quantity);
     return;
   }
 
   if (draft.step === "recipient") {
     const recipient = normalizeRecipient(text);
-
     if (!recipient) {
-      await ctx.reply("РћС‚РїСЂР°РІСЊС‚Рµ @username РёР»Рё Telegram ID РїРѕР»СѓС‡Р°С‚РµР»СЏ.");
+      await safeReply(ctx, "Отправьте @username или Telegram ID получателя.");
       return;
     }
 
     drafts.set(userId, { ...draft, recipient, step: "comment" });
-    await ctx.reply("РљРѕРјРјРµРЅС‚Р°СЂРёР№ Рє Р·Р°РєР°Р·Сѓ? Р•СЃР»Рё РЅРµ РЅСѓР¶РµРЅ, РЅР°Р¶РјРёС‚Рµ В«РџСЂРѕРїСѓСЃС‚РёС‚СЊВ».", {
-      reply_markup: commentInlineKeyboard(),
-    });
+    await safeReply(ctx, "Комментарий к заказу? Если не нужен, нажмите «Пропустить».", { reply_markup: commentInlineKeyboard() });
     return;
   }
 
@@ -560,23 +479,17 @@ bot.on("message:text", async (ctx) => {
 });
 
 bot.catch((error) => {
-  console.error("Bot error", error);
+  console.error("Bot middleware error", error.error);
 });
 
 async function configureBotMenu() {
   if (!canUseTelegramWebApp()) {
-    console.warn(
-      `WEB_APP_URL=${env.WEB_APP_URL} is not HTTPS. Telegram Mini Apps require a public HTTPS URL, so the Web App menu button was skipped.`,
-    );
+    console.warn(`WEB_APP_URL=${env.WEB_APP_URL} is not HTTPS. Telegram Mini Apps require a public HTTPS URL.`);
     return;
   }
 
   await bot.api.setChatMenuButton({
-    menu_button: {
-      type: "web_app",
-      text: "Suup Stars",
-      web_app: { url: env.WEB_APP_URL },
-    },
+    menu_button: { type: "web_app", text: "SupStars", web_app: { url: env.WEB_APP_URL } },
   });
   console.log(`Telegram Web App menu button configured for ${env.WEB_APP_URL}`);
 }
@@ -617,21 +530,14 @@ async function start() {
       throw new Error("BOT_PUBLIC_URL or BOT_WEBHOOK_URL is required for webhook mode");
     }
 
-    await bot.api.setWebhook(
-      botWebhookUrl,
-      env.BOT_WEBHOOK_SECRET ? { secret_token: env.BOT_WEBHOOK_SECRET } : undefined,
-    );
+    await bot.api.setWebhook(botWebhookUrl, env.BOT_WEBHOOK_SECRET ? { secret_token: env.BOT_WEBHOOK_SECRET } : undefined);
     console.log(`Telegram webhook configured: ${botWebhookUrl}`);
 
     const app = createHealthApp();
     app.post(
       botWebhookPath,
       express.json(),
-      webhookCallback(
-        bot,
-        "express",
-        env.BOT_WEBHOOK_SECRET ? { secretToken: env.BOT_WEBHOOK_SECRET } : undefined,
-      ),
+      webhookCallback(bot, "express", env.BOT_WEBHOOK_SECRET ? { secretToken: env.BOT_WEBHOOK_SECRET } : undefined),
     );
     console.log(`Telegram webhook endpoint is listening on POST ${botWebhookPath}`);
     listenHttp(app);
@@ -640,12 +546,10 @@ async function start() {
 
   listenHttp(createHealthApp());
   await bot.api.deleteWebhook();
-  await bot.start({
-    onStart: (info) => console.log(`Bot @${info.username} started in polling mode`),
-  });
+  await bot.start({ onStart: (info) => console.log(`Bot @${info.username} started in polling mode`) });
 }
 
 start().catch((error: unknown) => {
-  console.error(error);
+  console.error("Fatal bot startup error", error);
   process.exit(1);
 });

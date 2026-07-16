@@ -1,5 +1,5 @@
-﻿import type { Order, OrderItem, Payment, ProductType, User } from "@prisma/client";
-import { notifyAdmins } from "./telegram-notifier.js";
+import type { Order, OrderItem, Payment, ProductType, User } from "@prisma/client";
+import { notifyAdmins, type TelegramReplyMarkup } from "./telegram-notifier.js";
 
 type OrderForNotification = Order & {
   items: OrderItem[];
@@ -10,12 +10,12 @@ type OrderForNotification = Order & {
 type AdminOrderEvent = "created" | "invoice_created" | "manual_payment_created" | "manual_payment_submitted" | "paid" | "cancelled";
 
 const eventTitle: Record<AdminOrderEvent, string> = {
-  created: "New order",
-  invoice_created: "Crypto invoice created",
-  manual_payment_created: "Manual wallet payment created",
-  manual_payment_submitted: "Manual wallet payment submitted",
-  paid: "Order paid",
-  cancelled: "Order cancelled",
+  created: "Новый заказ",
+  invoice_created: "Создан Crypto Bot invoice",
+  manual_payment_created: "Создан manual wallet payment",
+  manual_payment_submitted: "Покупатель отметил перевод как оплаченный",
+  paid: "Заказ оплачен",
+  cancelled: "Заказ отменен",
 };
 
 export async function notifyAdminsAboutOrderEvent(input: {
@@ -31,20 +31,39 @@ export async function notifyAdminsAboutOrderEvent(input: {
   await notifyAdmins(
     [
       `<b>${eventTitle[input.event]}</b>`,
-      `ID: <b>${escapeHtml(input.order.orderNumber)}</b>`,
-      `Product: ${formatItem(item)}`,
-      `Amount: ${formatOrderAmount(input.order)}`,
-      `Buyer: ${formatBuyer(buyer)}`,
-      `Recipient: @${escapeHtml(input.order.recipientUsername)}`,
-      `Order: <b>${escapeHtml(input.order.status)}</b>`,
-      `Payment: ${formatPayment(payment)}`,
-    ].join("\n"),
+      `Заказ: <b>${escapeHtml(input.order.orderNumber)}</b>`,
+      payment ? `Payment ID: <code>${escapeHtml(payment.id)}</code>` : "",
+      `Товар: ${formatItem(item)}`,
+      `Сумма: ${formatOrderAmount(input.order)}`,
+      `Покупатель: ${formatBuyer(buyer)}`,
+      `Получатель: @${escapeHtml(input.order.recipientUsername)}`,
+      `Статус заказа: <b>${escapeHtml(input.order.status)}</b>`,
+      `Оплата: ${formatPayment(payment)}`,
+    ]
+      .filter(Boolean)
+      .join("\n"),
+    buildManualPaymentActions(payment),
   );
+}
+
+function buildManualPaymentActions(payment: Payment | null): TelegramReplyMarkup | undefined {
+  if (!payment || payment.provider !== "manual_wallet_transfer" || payment.status !== "awaiting_manual_verification") {
+    return undefined;
+  }
+
+  return {
+    inline_keyboard: [
+      [
+        { text: "✅ Подтвердить оплату", callback_data: `admin:manual:approve:${payment.id}` },
+        { text: "❌ Отклонить", callback_data: `admin:manual:reject:${payment.id}` },
+      ],
+    ],
+  };
 }
 
 function formatItem(item: OrderItem | undefined) {
   if (!item) {
-    return "Order";
+    return "Заказ";
   }
 
   const quantity = item.productType === "stars" ? ` x${item.quantity}` : "";
@@ -59,7 +78,7 @@ function formatOrderAmount(order: Order) {
 
 function formatBuyer(user: User | undefined) {
   if (!user) {
-    return "unknown";
+    return "неизвестен";
   }
 
   const username = user.username ? ` @${escapeHtml(user.username)}` : "";
@@ -68,7 +87,7 @@ function formatBuyer(user: User | undefined) {
 
 function formatPayment(payment: Payment | null) {
   if (!payment) {
-    return "not created yet";
+    return "еще не создана";
   }
 
   const asset = payment.asset ? ` ${escapeHtml(payment.asset)}` : "";
@@ -87,12 +106,11 @@ function formatManualPayload(payload: unknown) {
   const network = readString(value.network);
   const address = readString(value.address);
   const txHash = readString(value.txHash);
-  const lines = [
-    network ? `\nNetwork: ${escapeHtml(network)}` : "",
-    address ? `\nAddress: <code>${escapeHtml(address)}</code>` : "",
+  return [
+    network ? `\nСеть: ${escapeHtml(network)}` : "",
+    address ? `\nАдрес: <code>${escapeHtml(address)}</code>` : "",
     txHash ? `\nTx: <code>${escapeHtml(txHash)}</code>` : "",
-  ];
-  return lines.join("");
+  ].join("");
 }
 
 function readString(value: unknown) {
@@ -104,8 +122,5 @@ function productTypeLabel(productType: ProductType) {
 }
 
 function escapeHtml(value: string) {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;");
+  return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 }

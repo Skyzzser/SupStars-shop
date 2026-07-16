@@ -2,7 +2,17 @@ import { env, adminTelegramIds } from "../config/env.js";
 
 type MessageTarget = string | bigint;
 
-async function sendTelegramMessage(chatId: MessageTarget, text: string) {
+type InlineKeyboardButton = {
+  text: string;
+  callback_data?: string;
+  url?: string;
+};
+
+export type TelegramReplyMarkup = {
+  inline_keyboard: InlineKeyboardButton[][];
+};
+
+async function sendTelegramMessage(chatId: MessageTarget, text: string, replyMarkup?: TelegramReplyMarkup) {
   const response = await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/sendMessage`, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -10,6 +20,7 @@ async function sendTelegramMessage(chatId: MessageTarget, text: string) {
       chat_id: chatId.toString(),
       text,
       parse_mode: "HTML",
+      ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
     }),
   });
 
@@ -19,10 +30,10 @@ async function sendTelegramMessage(chatId: MessageTarget, text: string) {
   }
 }
 
-export async function notifyUser(chatId: MessageTarget, text: string) {
-  await sendTelegramMessage(chatId, text);
+export async function notifyUser(chatId: MessageTarget, text: string, replyMarkup?: TelegramReplyMarkup) {
+  await sendTelegramMessage(chatId, text, replyMarkup);
 }
 
-export async function notifyAdmins(text: string) {
-  await Promise.all(adminTelegramIds.map((id) => sendTelegramMessage(id, text)));
+export async function notifyAdmins(text: string, replyMarkup?: TelegramReplyMarkup) {
+  await Promise.all(adminTelegramIds.map((id) => sendTelegramMessage(id, text, replyMarkup)));
 }

@@ -1,4 +1,4 @@
-﻿import { randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { apiPublicUrl, env } from "./env.js";
 
 type ProductType = "stars" | "premium";
@@ -166,6 +166,15 @@ export async function confirmBotManualWalletPayment(
   });
 }
 
+export async function adminVerifyBotManualWalletPayment(
+  input: { paymentId: string; action: "approve" | "reject"; note?: string },
+  user: { id: number; username?: string; first_name?: string },
+) {
+  return apiFetch<{ order: OrderDto; payment: PaymentDto }>("/admin/payments/manual/verify", user, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
 export async function listBotOrders(user: { id: number; username?: string; first_name?: string }) {
   return apiFetch<{ orders: OrderDto[] }>("/orders/me", user);
 }
