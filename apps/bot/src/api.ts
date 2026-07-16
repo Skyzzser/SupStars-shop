@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+﻿import { randomUUID } from "node:crypto";
 import { apiPublicUrl, env } from "./env.js";
 
 type ProductType = "stars" | "premium";
@@ -27,9 +27,19 @@ export type PaymentDto = {
   id: string;
   provider: string;
   status: string;
-  asset: CryptoAsset | null;
+  asset: CryptoAsset | string | null;
   amount: number | null;
   payUrl: string | null;
+  amountRub?: number;
+  amountUsd?: number;
+  manualWallet?: {
+    network: string;
+    asset: string;
+    address: string;
+    memo: string | null;
+    txHash: string | null;
+    instructions: string | null;
+  } | null;
 };
 
 type ApiErrorPayload = {
@@ -131,6 +141,26 @@ export async function createBotCryptoInvoice(
   user: { id: number; username?: string; first_name?: string },
 ) {
   return apiFetch<{ order: OrderDto; payment: PaymentDto }>("/payments/crypto/create", user, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function createBotManualWalletPayment(
+  input: { orderId: string },
+  user: { id: number; username?: string; first_name?: string },
+) {
+  return apiFetch<{ order: OrderDto; payment: PaymentDto }>("/payments/manual-wallet/create", user, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function confirmBotManualWalletPayment(
+  input: { paymentId: string; txHash?: string },
+  user: { id: number; username?: string; first_name?: string },
+) {
+  return apiFetch<{ order: OrderDto; payment: PaymentDto }>("/payments/manual-wallet/confirm", user, {
     method: "POST",
     body: JSON.stringify(input),
   });

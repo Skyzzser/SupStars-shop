@@ -15,6 +15,7 @@ enum ProductType {
 enum OrderStatus {
   pending
   awaiting_payment
+  awaiting_manual_verification
   paid
   processing
   completed

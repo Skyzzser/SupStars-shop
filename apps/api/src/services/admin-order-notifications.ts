@@ -1,4 +1,4 @@
-import type { Order, OrderItem, Payment, ProductType, User } from "@prisma/client";
+﻿import type { Order, OrderItem, Payment, ProductType, User } from "@prisma/client";
 import { notifyAdmins } from "./telegram-notifier.js";
 
 type OrderForNotification = Order & {
@@ -7,13 +7,15 @@ type OrderForNotification = Order & {
   payments?: Payment[];
 };
 
-type AdminOrderEvent = "created" | "invoice_created" | "paid" | "cancelled";
+type AdminOrderEvent = "created" | "invoice_created" | "manual_payment_created" | "manual_payment_submitted" | "paid" | "cancelled";
 
 const eventTitle: Record<AdminOrderEvent, string> = {
-  created: "🆕 Новый заказ",
-  invoice_created: "🧾 Создан invoice",
-  paid: "✅ Заказ оплачен",
-  cancelled: "🚫 Заказ отменён",
+  created: "New order",
+  invoice_created: "Crypto invoice created",
+  manual_payment_created: "Manual wallet payment created",
+  manual_payment_submitted: "Manual wallet payment submitted",
+  paid: "Order paid",
+  cancelled: "Order cancelled",
 };
 
 export async function notifyAdminsAboutOrderEvent(input: {
@@ -30,19 +32,19 @@ export async function notifyAdminsAboutOrderEvent(input: {
     [
       `<b>${eventTitle[input.event]}</b>`,
       `ID: <b>${escapeHtml(input.order.orderNumber)}</b>`,
-      `Товар: ${formatItem(item)}`,
-      `Сумма: ${formatOrderAmount(input.order)}`,
-      `Покупатель: ${formatBuyer(buyer)}`,
-      `Получатель: @${escapeHtml(input.order.recipientUsername)}`,
-      `Заказ: <b>${escapeHtml(input.order.status)}</b>`,
-      `Оплата: ${formatPayment(payment)}`,
+      `Product: ${formatItem(item)}`,
+      `Amount: ${formatOrderAmount(input.order)}`,
+      `Buyer: ${formatBuyer(buyer)}`,
+      `Recipient: @${escapeHtml(input.order.recipientUsername)}`,
+      `Order: <b>${escapeHtml(input.order.status)}</b>`,
+      `Payment: ${formatPayment(payment)}`,
     ].join("\n"),
   );
 }
 
 function formatItem(item: OrderItem | undefined) {
   if (!item) {
-    return "Заказ";
+    return "Order";
   }
 
   const quantity = item.productType === "stars" ? ` x${item.quantity}` : "";
@@ -57,7 +59,7 @@ function formatOrderAmount(order: Order) {
 
 function formatBuyer(user: User | undefined) {
   if (!user) {
-    return "неизвестен";
+    return "unknown";
   }
 
   const username = user.username ? ` @${escapeHtml(user.username)}` : "";
@@ -66,13 +68,35 @@ function formatBuyer(user: User | undefined) {
 
 function formatPayment(payment: Payment | null) {
   if (!payment) {
-    return "invoice ещё нет";
+    return "not created yet";
   }
 
   const asset = payment.asset ? ` ${escapeHtml(payment.asset)}` : "";
   const amount = payment.amount ? ` ${payment.amount.toString()}` : "";
-  const invoice = payment.providerPaymentId ? ` #${escapeHtml(payment.providerPaymentId)}` : "";
-  return `<b>${escapeHtml(payment.status)}</b>${asset}${amount}${invoice}`;
+  const reference = payment.providerPaymentId ? ` #${escapeHtml(payment.providerPaymentId)}` : "";
+  const manual = payment.provider === "manual_wallet_transfer" ? formatManualPayload(payment.payload) : "";
+  return `<b>${escapeHtml(payment.status)}</b> ${escapeHtml(payment.provider)}${asset}${amount}${reference}${manual}`;
+}
+
+function formatManualPayload(payload: unknown) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return "";
+  }
+
+  const value = payload as Record<string, unknown>;
+  const network = readString(value.network);
+  const address = readString(value.address);
+  const txHash = readString(value.txHash);
+  const lines = [
+    network ? `\nNetwork: ${escapeHtml(network)}` : "",
+    address ? `\nAddress: <code>${escapeHtml(address)}</code>` : "",
+    txHash ? `\nTx: <code>${escapeHtml(txHash)}</code>` : "",
+  ];
+  return lines.join("");
+}
+
+function readString(value: unknown) {
+  return typeof value === "string" && value.trim() ? value : null;
 }
 
 function productTypeLabel(productType: ProductType) {

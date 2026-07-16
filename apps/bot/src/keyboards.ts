@@ -1,25 +1,25 @@
-import { InlineKeyboard, Keyboard } from "grammy";
+﻿import { InlineKeyboard, Keyboard } from "grammy";
 import { appUrl, canUseTelegramWebApp, env } from "./env.js";
 
 export function mainReplyKeyboard() {
   return new Keyboard()
-    .text("Купить звёзды")
-    .text("Купить Premium")
+    .text("Buy Stars")
+    .text("Buy Premium")
     .row()
-    .text("Мои заказы")
-    .text("Поддержка")
+    .text("My orders")
+    .text("Support")
     .resized();
 }
 
 export function storeInlineKeyboard() {
   const keyboard = new InlineKeyboard()
-    .text("Купить звёзды", "buy:stars")
-    .text("Купить Premium", "buy:premium")
+    .text("Buy Stars", "buy:stars")
+    .text("Buy Premium", "buy:premium")
     .row()
-    .text("Мои заказы", "orders:list");
+    .text("My orders", "orders:list");
 
   if (canUseTelegramWebApp()) {
-    keyboard.row().webApp("Открыть Mini App", appUrl("/"));
+    keyboard.row().webApp("Open Mini App", appUrl("/"));
   }
 
   return keyboard;
@@ -34,11 +34,25 @@ export function quantityInlineKeyboard() {
     .text("500", "qty:500")
     .text("1000", "qty:1000")
     .row()
-    .text("Отмена", "order:cancel");
+    .text("Cancel", "order:cancel");
 }
 
 export function commentInlineKeyboard() {
-  return new InlineKeyboard().text("Пропустить", "comment:skip").text("Отмена", "order:cancel");
+  return new InlineKeyboard().text("Skip", "comment:skip").text("Cancel", "order:cancel");
+}
+
+export function paymentMethodInlineKeyboard(orderId: string) {
+  const keyboard = new InlineKeyboard()
+    .text("Crypto Bot", `pay:crypto:${orderId}`)
+    .text("Wallet transfer", `pay:wallet:${orderId}`)
+    .row();
+
+  if (canUseTelegramWebApp()) {
+    keyboard.webApp("Open payment page", appUrl(`/checkout/payment?orderId=${orderId}`)).row();
+  }
+
+  keyboard.text("My orders", "orders:list");
+  return keyboard;
 }
 
 export function cryptoInvoiceInlineKeyboard(payments: Array<{ asset: string | null; payUrl: string | null }>) {
@@ -46,22 +60,29 @@ export function cryptoInvoiceInlineKeyboard(payments: Array<{ asset: string | nu
 
   for (const payment of payments) {
     if (payment.asset && payment.payUrl) {
-      keyboard.url(`Оплатить ${payment.asset}`, payment.payUrl).row();
+      keyboard.url(`Pay ${payment.asset}`, payment.payUrl).row();
     }
   }
 
-  keyboard.text("Мои заказы", "orders:list");
+  keyboard.text("My orders", "orders:list");
 
   return keyboard;
 }
 
+export function manualWalletInlineKeyboard(paymentId: string) {
+  return new InlineKeyboard()
+    .text("I paid", `manual:paid:${paymentId}`)
+    .row()
+    .text("My orders", "orders:list");
+}
+
 export function supportInlineKeyboard() {
   const keyboard = canUseTelegramWebApp()
-    ? new InlineKeyboard().webApp("FAQ в Mini App", appUrl("/support"))
-    : new InlineKeyboard().url("FAQ на сайте", appUrl("/support"));
+    ? new InlineKeyboard().webApp("FAQ in Mini App", appUrl("/support"))
+    : new InlineKeyboard().url("FAQ", appUrl("/support"));
 
   if (env.SUPPORT_URL) {
-    keyboard.row().url("Написать в поддержку", env.SUPPORT_URL);
+    keyboard.row().url("Contact support", env.SUPPORT_URL);
   }
 
   return keyboard;

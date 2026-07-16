@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { HelpCircle, ShieldCheck, ShoppingBag } from "lucide-react";
@@ -16,11 +16,11 @@ export default function HomePage() {
 
   return (
     <AppShell
-      title="Магазин"
+      title="Store"
       action={
         isAdmin ? (
           <Link href="/admin">
-            <Button variant="secondary" icon={<ShieldCheck size={16} />} aria-label="Админка">
+            <Button variant="secondary" icon={<ShieldCheck size={16} />} aria-label="Admin">
               Admin
             </Button>
           </Link>
@@ -33,24 +33,24 @@ export default function HomePage() {
             <ShoppingBag size={22} />
           </div>
           <div className="min-w-0">
-            <h2 className="text-lg font-semibold">Telegram Stars и Premium</h2>
+            <h2 className="text-lg font-semibold">Telegram Stars and Premium</h2>
             <p className="mt-2 text-sm leading-5 text-tg-hint">
-              Выберите товар, оплатите через Crypto Bot и отслеживайте статус заказа здесь.
+              Choose a product, pay with Crypto Bot or wallet transfer, and track order status here.
             </p>
           </div>
         </div>
         <Link href="/support" className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-tg-link">
           <HelpCircle size={16} />
-          Помощь и вопросы
+          Help and questions
         </Link>
       </section>
 
-      {products.isLoading ? <LoadingState text="Загружаем товары..." /> : null}
+      {products.isLoading ? <LoadingState text="Loading products..." /> : null}
       {products.isError ? <ErrorState message={products.error.message} /> : null}
       {products.isSuccess && productList.length === 0 ? (
         <EmptyState
-          title="Товары не найдены"
-          text="В базе нет активных товаров. Запустите seed для production database."
+          title="No products found"
+          text="There are no active products in the database. Run seed for the production database."
         />
       ) : null}
 

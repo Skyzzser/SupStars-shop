@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -26,7 +26,7 @@ export default function CheckoutPage() {
   return (
     <Suspense
       fallback={
-        <AppShell title="Оформление">
+        <AppShell title="Checkout">
           <LoadingState />
         </AppShell>
       }
@@ -74,75 +74,79 @@ function CheckoutContent() {
       const result = await createOrder.mutateAsync(input);
       router.replace(`/checkout/payment?orderId=${result.order.id}`);
     } catch {
-      // The mutation state renders a user-facing error below the form.
+      // Mutation state renders the error.
     }
   }
 
   return (
-    <AppShell title="Оформление">
+    <AppShell title="Checkout">
       <Panel>
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-sm text-tg-hint">Товар</p>
+            <p className="text-sm text-tg-hint">Product</p>
             <h2 className="text-lg font-semibold">{productTitle}</h2>
           </div>
           <span className="rounded-md bg-black/20 px-3 py-1.5 text-sm">
-            {productType === "stars" ? `${quantity} шт.` : "1 шт."}
+            {productType === "stars" ? `${quantity} pcs.` : "1 pc."}
           </span>
         </div>
-        <div className="mt-4 grid grid-cols-2 gap-2">
-          <div className="rounded-md bg-black/20 p-3">
-            <p className="text-sm text-tg-hint">RUB</p>
-            <p className="font-semibold">{formatRub(price.totalRub)}</p>
-          </div>
-          <div className="rounded-md bg-black/20 p-3">
-            <p className="text-sm text-tg-hint">USD</p>
-            <p className="font-semibold">{formatUsd(price.totalUsd)}</p>
-          </div>
+        <div className="mt-4 space-y-2 rounded-md border border-tg-border bg-black/20 p-3 text-sm">
+          <PriceRow label="Base price" value={`${formatRub(price.subtotalRub)} / ${formatUsd(price.subtotalUsd)}`} />
+          {price.serviceFeeApplied ? (
+            <PriceRow label="Service fee" value={`${formatRub(price.serviceFeeRub)} / ${formatUsd(price.serviceFeeUsd)}`} />
+          ) : null}
+          <PriceRow label="Total" value={`${formatRub(price.totalRub)} / ${formatUsd(price.totalUsd)}`} strong />
         </div>
       </Panel>
 
       <Panel>
         <label className="block">
-          <span className="mb-2 block text-sm text-tg-hint">Получатель</span>
+          <span className="mb-2 block text-sm text-tg-hint">Recipient</span>
           <input
             value={recipient}
             onChange={(event) => setRecipient(event.target.value)}
-            placeholder="@username или Telegram ID"
+            placeholder="@username or Telegram ID"
             className="h-12 w-full rounded-md border border-tg-border bg-black/20 px-3 text-base outline-none focus:border-tg-button"
           />
         </label>
         <label className="mt-4 block">
-          <span className="mb-2 block text-sm text-tg-hint">Комментарий</span>
+          <span className="mb-2 block text-sm text-tg-hint">Comment</span>
           <textarea
             value={comment}
             onChange={(event) => setComment(event.target.value)}
             rows={4}
-            placeholder="Например: удобное время, уточнения по получателю"
+            placeholder="Optional details for fulfillment"
             className="w-full resize-none rounded-md border border-tg-border bg-black/20 px-3 py-3 text-base outline-none focus:border-tg-button"
           />
         </label>
       </Panel>
 
       {createOrder.isError ? <ErrorState message={createOrder.error.message} /> : null}
-      {!canAuthenticate ? (
-        <ErrorState message="Откройте магазин через кнопку Mini App в Telegram. В обычном браузере Telegram initData недоступен, поэтому заказ создать нельзя." />
-      ) : null}
+      {!canAuthenticate ? <ErrorState message="Open the shop through Telegram Mini App to create an order." /> : null}
 
       <div className="grid grid-cols-2 gap-2">
         <Link href={productType === "stars" ? "/stars" : "/premium"}>
           <Button variant="secondary" className="w-full" icon={<ArrowLeft size={17} />}>
-            Назад
+            Back
           </Button>
         </Link>
         <Button onClick={() => router.push("/")} variant="danger" icon={<XCircle size={17} />}>
-          Отмена
+          Cancel
         </Button>
       </div>
       <Button disabled={!canSubmit} onClick={onSubmit} className="w-full" icon={<CheckCircle size={18} />}>
-        {createOrder.isPending ? "Создаем заказ..." : "Подтвердить заказ"}
+        {createOrder.isPending ? "Creating order..." : "Confirm order"}
       </Button>
     </AppShell>
+  );
+}
+
+function PriceRow({ label, value, strong = false }: { label: string; value: string; strong?: boolean }) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <span className="text-tg-hint">{label}</span>
+      <span className={strong ? "font-semibold" : ""}>{value}</span>
+    </div>
   );
 }
 

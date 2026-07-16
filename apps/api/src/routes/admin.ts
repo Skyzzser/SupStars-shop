@@ -1,5 +1,5 @@
-import { Router } from "express";
-import { ordersQuerySchema, updateAdminNoteSchema, updateOrderStatusSchema } from "@suupstars/shared";
+﻿import { Router } from "express";
+import { ordersQuerySchema, updateAdminNoteSchema, updateOrderStatusSchema, verifyManualWalletPaymentSchema } from "@suupstars/shared";
 import { ApiError } from "../lib/http.js";
 import { asyncHandler } from "../middleware/async-handler.js";
 import { requireAdmin, requireTelegramUser } from "../middleware/auth.js";
@@ -10,6 +10,7 @@ import {
   updateInternalNote,
   updateOrderStatus,
 } from "../services/orders.service.js";
+import { paymentToPublicDto, verifyManualWalletPayment } from "../services/payments/payments.service.js";
 
 export const adminRouter = Router();
 
@@ -63,5 +64,18 @@ adminRouter.patch(
     const input = updateAdminNoteSchema.parse(req.body);
     const order = await updateInternalNote(getOrderId(req.params.id), req.authUser, input.internalNote);
     res.json({ order: adminOrderToDto(order) });
+  }),
+);
+
+adminRouter.patch(
+  "/payments/manual/verify",
+  asyncHandler(async (req, res) => {
+    if (!req.authUser) {
+      throw new ApiError(401, "Auth required", "AUTH_REQUIRED");
+    }
+
+    const input = verifyManualWalletPaymentSchema.parse(req.body);
+    const result = await verifyManualWalletPayment({ ...input, admin: req.authUser });
+    res.json({ order: adminOrderToDto(result.order), payment: paymentToPublicDto(result.payment) });
   }),
 );

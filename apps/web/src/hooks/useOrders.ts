@@ -1,7 +1,15 @@
-"use client";
+﻿"use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { CreateCryptoInvoiceRequest, CreateOrderRequest, OrderStatus, UpdateOrderStatusRequest } from "@suupstars/shared";
+import type {
+  ConfirmManualWalletPaymentRequest,
+  CreateCryptoInvoiceRequest,
+  CreateManualWalletPaymentRequest,
+  CreateOrderRequest,
+  OrderStatus,
+  UpdateOrderStatusRequest,
+  VerifyManualWalletPaymentRequest,
+} from "@suupstars/shared";
 import { api } from "@/lib/api";
 
 export function useCurrentUser() {
@@ -44,16 +52,28 @@ export function useCreateOrder() {
   });
 }
 
-export function useCreateCryptoInvoice() {
+function usePaymentMutation<TInput>(mutationFn: (input: TInput) => ReturnType<typeof api.createCryptoInvoice>) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (input: CreateCryptoInvoiceRequest) => api.createCryptoInvoice(input),
+    mutationFn,
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
       queryClient.setQueryData(["orders", data.order.id], { order: data.order });
     },
   });
+}
+
+export function useCreateCryptoInvoice() {
+  return usePaymentMutation((input: CreateCryptoInvoiceRequest) => api.createCryptoInvoice(input));
+}
+
+export function useCreateManualWalletPayment() {
+  return usePaymentMutation((input: CreateManualWalletPaymentRequest) => api.createManualWalletPayment(input));
+}
+
+export function useConfirmManualWalletPayment() {
+  return usePaymentMutation((input: ConfirmManualWalletPaymentRequest) => api.confirmManualWalletPayment(input));
 }
 
 export function useCancelOrder() {
@@ -89,6 +109,15 @@ export function useAdminUpdateNote() {
   return useMutation({
     mutationFn: ({ id, internalNote }: { id: string; internalNote: string }) =>
       api.adminUpdateNote(id, internalNote),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin"] }),
+  });
+}
+
+export function useAdminVerifyManualWalletPayment() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: VerifyManualWalletPaymentRequest) => api.adminVerifyManualWalletPayment(input),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin"] }),
   });
 }

@@ -1,7 +1,8 @@
-import type { Order, OrderItem } from "@prisma/client";
+﻿import type { Order, OrderItem } from "@prisma/client";
 import type { CryptoAsset } from "@suupstars/shared";
 
 export const CRYPTO_BOT_PROVIDER = "crypto_bot";
+export const MANUAL_WALLET_PROVIDER = "manual_wallet_transfer";
 
 export type PayableOrder = Order & {
   items: OrderItem[];
@@ -15,6 +16,21 @@ export type PaymentProviderInvoice = {
   amount: string;
   payUrl: string;
   payload: Record<string, unknown>;
+};
+
+export type ManualWalletPaymentSession = {
+  provider: typeof MANUAL_WALLET_PROVIDER;
+  providerPaymentId: string;
+  status: "pending";
+  asset: string;
+  amount: string;
+  payload: {
+    network: string;
+    asset: string;
+    address: string;
+    memo?: string;
+    instructions?: string;
+  };
 };
 
 export type CryptoWebhookInvoice = {
@@ -38,7 +54,7 @@ export type CryptoWebhookUpdate = {
   payload: CryptoWebhookInvoice;
 };
 
-export interface PaymentProvider {
+export interface CryptoPaymentProvider {
   readonly name: typeof CRYPTO_BOT_PROVIDER;
   createInvoice(input: { order: PayableOrder; asset: CryptoAsset }): Promise<PaymentProviderInvoice>;
   verifyWebhook(input: {
@@ -46,4 +62,9 @@ export interface PaymentProvider {
     signature: string | undefined;
     secret: string | undefined;
   }): CryptoWebhookUpdate;
+}
+
+export interface ManualPaymentProvider {
+  readonly name: typeof MANUAL_WALLET_PROVIDER;
+  createPaymentSession(input: { order: PayableOrder }): ManualWalletPaymentSession;
 }

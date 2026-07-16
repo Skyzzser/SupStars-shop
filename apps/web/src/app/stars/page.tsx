@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { ShoppingCart } from "lucide-react";
@@ -17,35 +17,41 @@ export default function StarsPage() {
   return (
     <AppShell title="Telegram Stars">
       <Panel>
-        <h2 className="font-semibold">Количество</h2>
-        <p className="mt-1 text-sm text-tg-hint">Минимальный заказ: {STARS_MIN_QUANTITY} Stars.</p>
+        <h2 className="font-semibold">Quantity</h2>
+        <p className="mt-1 text-sm text-tg-hint">Minimum order: {STARS_MIN_QUANTITY} Stars.</p>
         <div className="mt-4">
           <QuantitySelector value={quantity} onChange={setQuantity} />
         </div>
         {!isValid ? (
           <p className="mt-3 rounded-md bg-red-500/15 px-3 py-2 text-sm text-red-200">
-            Укажите не меньше {STARS_MIN_QUANTITY} Stars.
+            Enter at least {STARS_MIN_QUANTITY} Stars.
           </p>
         ) : null}
       </Panel>
 
       <Panel>
-        <div className="grid grid-cols-2 gap-2">
-          <div className="rounded-md bg-black/20 p-3">
-            <p className="text-sm text-tg-hint">Итого RUB</p>
-            <p className="text-xl font-semibold">{formatRub(price.totalRub)}</p>
-          </div>
-          <div className="rounded-md bg-black/20 p-3">
-            <p className="text-sm text-tg-hint">Итого USD</p>
-            <p className="text-xl font-semibold">{formatUsd(price.totalUsd)}</p>
-          </div>
+        <div className="space-y-2 rounded-md border border-tg-border bg-black/20 p-3 text-sm">
+          <PriceRow label="Base price" value={`${formatRub(price.subtotalRub)} / ${formatUsd(price.subtotalUsd)}`} />
+          {price.serviceFeeApplied ? (
+            <PriceRow label="Service fee" value={`${formatRub(price.serviceFeeRub)} / ${formatUsd(price.serviceFeeUsd)}`} />
+          ) : null}
+          <PriceRow label="Total" value={`${formatRub(price.totalRub)} / ${formatUsd(price.totalUsd)}`} strong />
         </div>
         <Link href={`/checkout?productType=stars&quantity=${quantity}`} className="mt-4 block">
           <Button disabled={!isValid} className="w-full" icon={<ShoppingCart size={18} />}>
-            Перейти к оформлению
+            Checkout
           </Button>
         </Link>
       </Panel>
     </AppShell>
+  );
+}
+
+function PriceRow({ label, value, strong = false }: { label: string; value: string; strong?: boolean }) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <span className="text-tg-hint">{label}</span>
+      <span className={strong ? "font-semibold" : ""}>{value}</span>
+    </div>
   );
 }

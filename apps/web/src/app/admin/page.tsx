@@ -1,16 +1,24 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
-import type { OrderStatus } from "@suupstars/shared";
-import { ORDER_STATUSES } from "@suupstars/shared";
-import { Lock, Save, ShieldCheck } from "lucide-react";
+import type { OrderStatus, PaymentDto } from "@suupstars/shared";
+import { ORDER_STATUSES, formatRub, formatUsd } from "@suupstars/shared";
+import { Lock, Save, ShieldCheck, XCircle } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/Button";
 import { OrderSummary } from "@/components/OrderSummary";
 import { Panel } from "@/components/Panel";
 import { ErrorState, LoadingState } from "@/components/StateViews";
 import { StatusPill } from "@/components/StatusPill";
-import { useAdminOrders, useAdminUpdateNote, useAdminUpdateStatus, useCurrentUser } from "@/hooks/useOrders";
+import {
+  useAdminOrders,
+  useAdminUpdateNote,
+  useAdminUpdateStatus,
+  useAdminVerifyManualWalletPayment,
+  useCurrentUser,
+} from "@/hooks/useOrders";
+
+const MANUAL_PROVIDER = "manual_wallet_transfer";
 
 export default function AdminPage() {
   const [status, setStatus] = useState<OrderStatus | undefined>();
@@ -23,18 +31,18 @@ export default function AdminPage() {
   if (currentUser.isLoading) {
     return (
       <AppShell title="Admin">
-        <LoadingState text="Проверяем доступ..." />
+        <LoadingState text="Checking access..." />
       </AppShell>
     );
   }
 
   if (currentUser.isError || !isAdmin) {
     return (
-      <AppShell title="Доступ закрыт" action={<Lock className="text-tg-hint" />}>
+      <AppShell title="Access denied" action={<Lock className="text-tg-hint" />}>
         <Panel>
-          <h2 className="font-semibold">Нет доступа к Admin</h2>
+          <h2 className="font-semibold">No admin access</h2>
           <p className="mt-2 text-sm leading-5 text-tg-hint">
-            Этот раздел доступен только администраторам из ADMIN_IDS.
+            This section is available only for admins configured in ADMIN_IDS or ADMIN_USERNAMES.
           </p>
         </Panel>
       </AppShell>
@@ -45,13 +53,13 @@ export default function AdminPage() {
     <AppShell title="Admin" action={<ShieldCheck className="text-tg-link" />}>
       <Panel>
         <label className="block">
-          <span className="mb-2 block text-sm text-tg-hint">Фильтр статуса</span>
+          <span className="mb-2 block text-sm text-tg-hint">Status filter</span>
           <select
             value={status ?? ""}
             onChange={(event) => setStatus(event.target.value ? (event.target.value as OrderStatus) : undefined)}
             className="h-11 w-full rounded-md border border-tg-border bg-black/20 px-3 outline-none"
           >
-            <option value="">Все</option>
+            <option value="">All</option>
             {ORDER_STATUSES.map((item) => (
               <option key={item} value={item}>
                 {item}
@@ -67,29 +75,95 @@ export default function AdminPage() {
       {updateNote.isError ? <ErrorState message={updateNote.error.message} /> : null}
 
       <div className="space-y-3">
-        {orders.data?.orders.map((order) => (
-          <Panel key={order.id}>
-            <OrderSummary order={order} />
-            <div className="mt-3 rounded-md bg-black/20 p-3 text-sm text-tg-hint">
-              <p>
-                Клиент: {order.user.username ? `@${order.user.username}` : order.user.telegramId}
-                {order.user.firstName ? ` · ${order.user.firstName}` : ""}
-              </p>
-              {order.comment ? <p className="mt-1">Комментарий: {order.comment}</p> : null}
-            </div>
-            <AdminOrderControls
-              orderId={order.id}
-              currentStatus={order.status}
-              currentNote={order.internalNote ?? ""}
-              onStatus={(nextStatus, note) =>
-                updateStatus.mutate({ id: order.id, input: { status: nextStatus, note } })
-              }
-              onNote={(internalNote) => updateNote.mutate({ id: order.id, internalNote })}
-            />
-          </Panel>
-        ))}
+        {orders.data?.orders.map((order) => {
+          const manualPayment = order.payments.find((payment) => payment.provider === MANUAL_PROVIDER);
+
+          return (
+            <Panel key={order.id}>
+              <OrderSummary order={order} />
+              <div className="mt-3 rounded-md bg-black/20 p-3 text-sm text-tg-hint">
+                <p>
+                  Client: {order.user.username ? `@${order.user.username}` : order.user.telegramId}
+                  {order.user.firstName ? ` · ${order.user.firstName}` : ""}
+                </p>
+                {order.comment ? <p className="mt-1">Comment: {order.comment}</p> : null}
+              </div>
+
+              {manualPayment ? <ManualPaymentControls payment={manualPayment} /> : null}
+
+              <AdminOrderControls
+                orderId={order.id}
+                currentStatus={order.status}
+                currentNote={order.internalNote ?? ""}
+                onStatus={(nextStatus, note) =>
+                  updateStatus.mutate({ id: order.id, input: { status: nextStatus, note } })
+                }
+                onNote={(internalNote) => updateNote.mutate({ id: order.id, internalNote })}
+              />
+            </Panel>
+          );
+        })}
       </div>
     </AppShell>
+  );
+}
+
+function ManualPaymentControls({ payment }: { payment: PaymentDto }) {
+  const [note, setNote] = useState("");
+  const verify = useAdminVerifyManualWalletPayment();
+  const details = payment.manualWallet;
+  const canVerify = payment.status === "awaiting_manual_verification";
+
+  if (!details) {
+    return null;
+  }
+
+  return (
+    <div className="mt-4 space-y-3 rounded-md border border-tg-border bg-black/20 p-3 text-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="font-semibold">Manual wallet payment</p>
+          <p className="text-tg-hint">{details.network} · {details.asset} · {payment.status}</p>
+        </div>
+        <p className="text-right font-semibold">{formatRub(payment.amountRub)} / {formatUsd(payment.amountUsd)}</p>
+      </div>
+      <Info label="Address" value={details.address} />
+      {details.memo ? <Info label="Memo" value={details.memo} /> : null}
+      {details.txHash ? <Info label="Tx" value={details.txHash} /> : null}
+      <input
+        value={note}
+        onChange={(event) => setNote(event.target.value)}
+        placeholder="Admin note"
+        className="h-11 w-full rounded-md border border-tg-border bg-black/20 px-3 text-sm outline-none"
+      />
+      <div className="grid grid-cols-2 gap-2">
+        <Button
+          disabled={!canVerify || verify.isPending}
+          onClick={() => verify.mutate({ paymentId: payment.id, action: "approve", note: note || undefined })}
+          icon={<ShieldCheck size={16} />}
+        >
+          Approve
+        </Button>
+        <Button
+          variant="danger"
+          disabled={!canVerify || verify.isPending}
+          onClick={() => verify.mutate({ paymentId: payment.id, action: "reject", note: note || undefined })}
+          icon={<XCircle size={16} />}
+        >
+          Reject
+        </Button>
+      </div>
+      {verify.isError ? <ErrorState message={verify.error.message} /> : null}
+    </div>
+  );
+}
+
+function Info({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <span className="text-tg-hint">{label}</span>
+      <span className="break-all text-right font-medium">{value}</span>
+    </div>
   );
 }
 
@@ -129,21 +203,21 @@ function AdminOrderControls({
       <input
         value={note}
         onChange={(event) => setNote(event.target.value)}
-        placeholder="Комментарий к смене статуса"
+        placeholder="Status change note"
         className="h-11 w-full rounded-md border border-tg-border bg-black/20 px-3 text-sm outline-none"
       />
       <Button className="w-full" onClick={() => onStatus(status, note || undefined)}>
-        Обновить статус
+        Update status
       </Button>
       <textarea
         value={internalNote}
         onChange={(event) => setInternalNote(event.target.value)}
         rows={3}
-        placeholder="Внутренняя заметка"
+        placeholder="Internal note"
         className="w-full resize-none rounded-md border border-tg-border bg-black/20 px-3 py-2 text-sm outline-none"
       />
       <Button variant="secondary" className="w-full" onClick={() => onNote(internalNote)} icon={<Save size={16} />}>
-        Сохранить заметку
+        Save note
       </Button>
     </div>
   );

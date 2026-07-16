@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { HelpCircle, MessageCircle } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
@@ -6,16 +6,20 @@ import { Panel } from "@/components/Panel";
 
 const faq = [
   {
-    title: "Как считается цена Stars?",
-    text: "Количество умножается на 0.019 USD и на 1.5 RUB. Минимальный заказ — 50 Stars.",
+    title: "How is Stars price calculated?",
+    text: "Stars are calculated from 1.4 RUB per Star and shown in RUB and USD. Minimum order is 50 Stars. Service fee is added only when enabled in pricing config.",
   },
   {
-    title: "Почему выдача ручная?",
-    text: "Автоматическую покупку или выдачу Stars/Premium через неофициальные API не имитируем. Заказ обрабатывает администратор, а код оставляет место для будущего официального provider.",
+    title: "Which payment methods are available?",
+    text: "You can pay with Crypto Bot invoices or by manual wallet transfer. Crypto Bot is confirmed by webhook; wallet transfer is confirmed by admin.",
   },
   {
-    title: "Где смотреть статус?",
-    text: "Все изменения доступны в истории заказа. Бот также отправляет уведомления о создании, смене статуса и завершении.",
+    title: "Why is fulfillment manual?",
+    text: "Stars and Premium delivery is handled by admin after payment confirmation. The app does not imitate unofficial Telegram delivery APIs.",
+  },
+  {
+    title: "Where can I track status?",
+    text: "Order status is available in order history. Wallet transfers can show Admin check until manual verification is complete.",
   },
 ];
 
@@ -25,7 +29,7 @@ export default function SupportPage() {
       <Panel>
         <div className="flex items-center gap-3">
           <HelpCircle className="text-tg-link" size={22} />
-          <h2 className="font-semibold">Частые вопросы</h2>
+          <h2 className="font-semibold">Questions</h2>
         </div>
         <div className="mt-4 space-y-4">
           {faq.map((item) => (
@@ -40,8 +44,8 @@ export default function SupportPage() {
         <div className="flex items-center gap-3">
           <MessageCircle className="text-tg-link" size={22} />
           <div>
-            <h2 className="font-semibold">Поддержка</h2>
-            <p className="mt-1 text-sm text-tg-hint">Напишите администратору через кнопку поддержки в боте.</p>
+            <h2 className="font-semibold">Support</h2>
+            <p className="mt-1 text-sm text-tg-hint">Contact support from the bot and include your order number.</p>
           </div>
         </div>
       </Panel>

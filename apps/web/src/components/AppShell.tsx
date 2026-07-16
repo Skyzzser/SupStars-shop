@@ -20,7 +20,7 @@ export function AppShell({ title, children, action }: { title: string; children:
     <main className="mx-auto flex min-h-screen w-full max-w-[520px] flex-col px-4 pt-5 text-tg-text">
       <header className="mb-5 flex items-center justify-between gap-3">
         <div>
-          <p className="text-sm text-tg-hint">@SuupStarsbot</p>
+          <p className="text-sm text-tg-hint">@SupStarssbot</p>
           <h1 className="text-2xl font-semibold tracking-normal">{title}</h1>
         </div>
         {action}

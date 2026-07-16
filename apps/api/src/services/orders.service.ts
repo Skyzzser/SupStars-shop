@@ -1,4 +1,4 @@
-import { Prisma, type OrderStatus, type ProductType, type User } from "@prisma/client";
+﻿import { Prisma, type OrderStatus, type ProductType, type User } from "@prisma/client";
 import type { CreateOrderRequest } from "@suupstars/shared";
 import { calculatePremiumPrice, calculateStarsPrice } from "@suupstars/shared";
 import { prisma } from "../db/prisma.js";
@@ -48,11 +48,11 @@ export async function createOrder(input: CreateOrderRequest, user: User) {
 
   const product = assertFound(
     await prisma.product.findUnique({ where: { type: input.productType } }),
-    "Товар не найден",
+    "РўРѕРІР°СЂ РЅРµ РЅР°Р№РґРµРЅ",
   );
 
   if (!product.isActive) {
-    throw new ApiError(400, "Товар временно недоступен", "PRODUCT_INACTIVE");
+    throw new ApiError(400, "РўРѕРІР°СЂ РІСЂРµРјРµРЅРЅРѕ РЅРµРґРѕСЃС‚СѓРїРµРЅ", "PRODUCT_INACTIVE");
   }
 
   const quantity = input.productType === "stars" ? input.quantity : 1;
@@ -77,14 +77,14 @@ export async function createOrder(input: CreateOrderRequest, user: User) {
             quantity,
             unitRub: product.priceRub,
             unitUsd: product.priceUsd,
-            totalRub: price.totalRub,
-            totalUsd: price.totalUsd,
+            totalRub: price.subtotalRub,
+            totalUsd: price.subtotalUsd,
           },
         },
         statusHistory: {
           create: {
             status: "awaiting_payment",
-            note: "Заказ создан, ожидает подтверждения оплаты.",
+            note: "Р—Р°РєР°Р· СЃРѕР·РґР°РЅ, РѕР¶РёРґР°РµС‚ РїРѕРґС‚РІРµСЂР¶РґРµРЅРёСЏ РѕРїР»Р°С‚С‹.",
             actorTelegramId: user.telegramId,
           },
         },
@@ -106,7 +106,7 @@ async function notifyOrderCreated(order: UserOrderWithRelations, user: User) {
   await Promise.all([
     notifyUser(
       user.telegramId,
-      `Заказ <b>${order.orderNumber}</b> создан.\nСтатус: ожидает подтверждения оплаты.`,
+      `Р—Р°РєР°Р· <b>${order.orderNumber}</b> СЃРѕР·РґР°РЅ.\nРЎС‚Р°С‚СѓСЃ: РѕР¶РёРґР°РµС‚ РїРѕРґС‚РІРµСЂР¶РґРµРЅРёСЏ РѕРїР»Р°С‚С‹.`,
     ),
     notifyAdminsAboutOrderEvent({ event: "created", order, buyer: user }),
   ]);
@@ -126,7 +126,7 @@ export async function getUserOrder(orderId: string, user: User) {
       where: { id: orderId, userId: user.id },
       include: orderInclude,
     }),
-    "Заказ не найден",
+    "Р—Р°РєР°Р· РЅРµ РЅР°Р№РґРµРЅ",
   );
 }
 
@@ -134,10 +134,10 @@ export async function cancelUserOrder(orderId: string, user: User) {
   const order = await getUserOrder(orderId, user);
 
   if (!["pending", "awaiting_payment"].includes(order.status)) {
-    throw new ApiError(400, "Этот заказ уже нельзя отменить", "ORDER_NOT_CANCELLABLE");
+    throw new ApiError(400, "Р­С‚РѕС‚ Р·Р°РєР°Р· СѓР¶Рµ РЅРµР»СЊР·СЏ РѕС‚РјРµРЅРёС‚СЊ", "ORDER_NOT_CANCELLABLE");
   }
 
-  return updateOrderStatus(order.id, "cancelled", user, "Заказ отменен пользователем");
+  return updateOrderStatus(order.id, "cancelled", user, "Р—Р°РєР°Р· РѕС‚РјРµРЅРµРЅ РїРѕР»СЊР·РѕРІР°С‚РµР»РµРј");
 }
 
 export async function updateOrderStatus(
@@ -178,11 +178,11 @@ export async function updateOrderStatus(
 
   await notifyUser(
     order.user.telegramId,
-    `Статус заказа <b>${order.orderNumber}</b> изменен: <b>${status}</b>${note ? `\n${note}` : ""}`,
+    `РЎС‚Р°С‚СѓСЃ Р·Р°РєР°Р·Р° <b>${order.orderNumber}</b> РёР·РјРµРЅРµРЅ: <b>${status}</b>${note ? `\n${note}` : ""}`,
   );
 
   if (status === "completed") {
-    await notifyUser(order.user.telegramId, `Заказ <b>${order.orderNumber}</b> выполнен. Спасибо!`);
+    await notifyUser(order.user.telegramId, `Р—Р°РєР°Р· <b>${order.orderNumber}</b> РІС‹РїРѕР»РЅРµРЅ. РЎРїР°СЃРёР±Рѕ!`);
   }
 
   if (status === "cancelled" || status === "paid") {
@@ -213,7 +213,7 @@ export async function getAdminOrder(orderId: string) {
       where: { id: orderId },
       include: adminOrderInclude,
     }),
-    "Заказ не найден",
+    "Р—Р°РєР°Р· РЅРµ РЅР°Р№РґРµРЅ",
   );
 }
 

@@ -1,28 +1,28 @@
-export const welcomeMessage = [
-  "<b>Suup Stars — продажа Telegram Stars и Premium</b>",
+﻿export const welcomeMessage = [
+  "<b>SupStars - Telegram Stars and Premium</b>",
   "",
-  "Здесь можно быстро оформить заказ прямо в боте или через Mini App.",
+  "Create an order in the bot or through the Mini App.",
   "",
-  "• Telegram Stars от 50 штук",
-  "• Telegram Premium по фиксированной цене",
-  "• Ручная проверка оплаты и выдачи",
-  "• Уведомления о статусе заказа",
+  "• Telegram Stars from 50 pcs",
+  "• Telegram Premium at a fixed price",
+  "• Crypto Bot or wallet transfer payments",
+  "• Manual fulfillment by admin",
   "",
-  "Выберите действие ниже.",
+  "Choose an action below.",
 ].join("\n");
 
 export const faqMessage = [
   "<b>FAQ</b>",
   "",
-  "• Минимальный заказ Stars: 50.",
-  "• Цена Stars: 1.5 RUB за штуку.",
-  "• Telegram Premium: 400 RUB.",
-  "• Заказ можно оформить прямо в боте без Mini App.",
-  "• После оформления администратор проверяет оплату и меняет статус заказа.",
+  "• Minimum Stars order: 50.",
+  "• Stars price: 1.4 RUB per Star, also shown in USD.",
+  "• Telegram Premium: 400 RUB, also shown in USD.",
+  "• Crypto Bot payments become paid only after webhook confirmation.",
+  "• Wallet transfers become paid only after admin approval.",
 ].join("\n");
 
 export const supportMessage = [
-  "<b>Поддержка Suup Stars</b>",
+  "<b>SupStars support</b>",
   "",
-  "Если возник вопрос по оплате или выдаче, напишите в поддержку. Номер заказа лучше отправлять сразу.",
+  "Send the order number if you have a question about payment or fulfillment.",
 ].join("\n");

@@ -1,12 +1,14 @@
-import { existsSync } from "node:fs";
+﻿import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import express from "express";
 import { Bot, InlineKeyboard, InputFile, webhookCallback, type Context } from "grammy";
-import { BotApiError, createBotCryptoInvoice, createBotOrder, listBotOrders, type PaymentDto } from "./api.js";
-import { botHttpPort, canUseTelegramWebApp, env } from "./env.js";
+import { BotApiError, confirmBotManualWalletPayment, createBotCryptoInvoice, createBotManualWalletPayment, createBotOrder, listBotOrders, type PaymentDto } from "./api.js";
+import { botHttpPort, botWebhookPath, botWebhookUrl, canUseTelegramWebApp, env } from "./env.js";
 import {
   commentInlineKeyboard,
   cryptoInvoiceInlineKeyboard,
+  manualWalletInlineKeyboard,
+  paymentMethodInlineKeyboard,
   mainReplyKeyboard,
   quantityInlineKeyboard,
   storeInlineKeyboard,
@@ -26,13 +28,14 @@ type Draft = {
 };
 
 const drafts = new Map<number, Draft>();
+const manualPaymentDrafts = new Map<number, string>();
 
 const commands = [
-  { command: "start", description: "Открыть главное меню" },
-  { command: "shop", description: "Открыть магазин" },
-  { command: "orders", description: "Мои заказы" },
+  { command: "start", description: "РћС‚РєСЂС‹С‚СЊ РіР»Р°РІРЅРѕРµ РјРµРЅСЋ" },
+  { command: "shop", description: "РћС‚РєСЂС‹С‚СЊ РјР°РіР°Р·РёРЅ" },
+  { command: "orders", description: "РњРѕРё Р·Р°РєР°Р·С‹" },
   { command: "faq", description: "FAQ" },
-  { command: "support", description: "Поддержка" },
+  { command: "support", description: "РџРѕРґРґРµСЂР¶РєР°" },
 ] as const;
 
 function getUserId(ctx: Context) {
@@ -106,7 +109,7 @@ async function sendStart(ctx: Context) {
     });
   }
 
-  await ctx.reply("Выберите, что хотите купить:", {
+  await ctx.reply("Р’С‹Р±РµСЂРёС‚Рµ, С‡С‚Рѕ С…РѕС‚РёС‚Рµ РєСѓРїРёС‚СЊ:", {
     reply_markup: storeInlineKeyboard(),
   });
 }
@@ -123,7 +126,7 @@ async function startStarsOrder(ctx: Context) {
     quantity: 50,
   });
 
-  await ctx.reply("Сколько Telegram Stars хотите купить? Минимум 50. Можно написать число или выбрать кнопку:", {
+  await ctx.reply("РЎРєРѕР»СЊРєРѕ Telegram Stars С…РѕС‚РёС‚Рµ РєСѓРїРёС‚СЊ? РњРёРЅРёРјСѓРј 50. РњРѕР¶РЅРѕ РЅР°РїРёСЃР°С‚СЊ С‡РёСЃР»Рѕ РёР»Рё РІС‹Р±СЂР°С‚СЊ РєРЅРѕРїРєСѓ:", {
     reply_markup: quantityInlineKeyboard(),
   });
 }
@@ -140,7 +143,7 @@ async function startPremiumOrder(ctx: Context) {
     quantity: 1,
   });
 
-  await ctx.reply("Кому оформить Telegram Premium? Отправьте @username или Telegram ID получателя.");
+  await ctx.reply("РљРѕРјСѓ РѕС„РѕСЂРјРёС‚СЊ Telegram Premium? РћС‚РїСЂР°РІСЊС‚Рµ @username РёР»Рё Telegram ID РїРѕР»СѓС‡Р°С‚РµР»СЏ.");
 }
 
 async function askRecipient(ctx: Context, quantity: number) {
@@ -151,7 +154,7 @@ async function askRecipient(ctx: Context, quantity: number) {
   }
 
   drafts.set(userId, { ...draft, quantity, step: "recipient" });
-  await ctx.reply("Кому отправить заказ? Отправьте @username или Telegram ID получателя.");
+  await ctx.reply("РљРѕРјСѓ РѕС‚РїСЂР°РІРёС‚СЊ Р·Р°РєР°Р·? РћС‚РїСЂР°РІСЊС‚Рµ @username РёР»Рё Telegram ID РїРѕР»СѓС‡Р°С‚РµР»СЏ.");
 }
 
 async function createCryptoInvoicesForOrder(
@@ -175,6 +178,63 @@ async function createCryptoInvoicesForOrder(
   return payments;
 }
 
+
+async function sendCryptoPaymentOptions(ctx: Context, orderId: string) {
+  try {
+    const payments = await createCryptoInvoicesForOrder(orderId, getTelegramUser(ctx));
+    await ctx.reply(
+      payments.length > 0
+        ? "Choose a Crypto Bot invoice. Order becomes paid only after Crypto Pay webhook confirmation."
+        : "Crypto Bot invoices could not be created. Try wallet transfer or contact support.",
+      {
+        reply_markup: payments.length > 0 ? cryptoInvoiceInlineKeyboard(payments) : storeInlineKeyboard(),
+      },
+    );
+  } catch (error) {
+    logBotApiError("Failed to create crypto payment options", error);
+    await ctx.reply("Could not create Crypto Bot invoices. Try again later or use wallet transfer.", {
+      reply_markup: storeInlineKeyboard(),
+    });
+  }
+}
+
+async function sendManualWalletPayment(ctx: Context, orderId: string) {
+  try {
+    const { order, payment } = await createBotManualWalletPayment({ orderId }, getTelegramUser(ctx));
+    await ctx.reply(formatManualWalletMessage(order.orderNumber, payment), {
+      parse_mode: "HTML",
+      reply_markup: manualWalletInlineKeyboard(payment.id),
+    });
+  } catch (error) {
+    logBotApiError("Failed to create manual wallet payment", error);
+    await ctx.reply("Could not prepare wallet transfer details. Check support or try Crypto Bot.", {
+      reply_markup: storeInlineKeyboard(),
+    });
+  }
+}
+
+function formatManualWalletMessage(orderNumber: string, payment: PaymentDto) {
+  const wallet = payment.manualWallet;
+  if (!wallet) {
+    return "Wallet details are unavailable. Contact support.";
+  }
+
+  return [
+    "<b>Wallet transfer</b>",
+    "",
+    `Order: <b>${orderNumber}</b>`,
+    `Network: <b>${wallet.network}</b>`,
+    `Asset: <b>${wallet.asset}</b>`,
+    `Amount: <b>${payment.amount ?? payment.amountUsd ?? ""} ${payment.asset ?? wallet.asset}</b>`,
+    `Address: <code>${wallet.address}</code>`,
+    wallet.memo ? `Memo: <code>${wallet.memo}</code>` : "",
+    wallet.instructions ? `Note: ${wallet.instructions}` : "",
+    "",
+    "After transfer, tap <b>I paid</b> and send tx hash / transaction id. Order becomes paid only after admin approval.",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
 async function createOrderFromDraft(
   ctx: Context,
   comment = "",
@@ -183,7 +243,7 @@ async function createOrderFromDraft(
   const draft = userId ? drafts.get(userId) : undefined;
 
   if (!userId || !draft || !draft.recipient) {
-    await ctx.reply("Заказ не найден. Начните заново через кнопку «Купить звёзды» или «Купить Premium».", {
+    await ctx.reply("Р—Р°РєР°Р· РЅРµ РЅР°Р№РґРµРЅ. РќР°С‡РЅРёС‚Рµ Р·Р°РЅРѕРІРѕ С‡РµСЂРµР· РєРЅРѕРїРєСѓ В«РљСѓРїРёС‚СЊ Р·РІС‘Р·РґС‹В» РёР»Рё В«РљСѓРїРёС‚СЊ PremiumВ».", {
       reply_markup: storeInlineKeyboard(),
     });
     return;
@@ -201,30 +261,27 @@ async function createOrderFromDraft(
     );
 
     drafts.delete(userId);
-    const payments = await createCryptoInvoicesForOrder(order.id, getTelegramUser(ctx));
 
     await ctx.reply(
       [
-        "✅ <b>Заказ создан</b>",
+        "✅ <b>Order created</b>",
         "",
-        `Номер: <b>${order.orderNumber}</b>`,
-        `Получатель: @${order.recipientUsername}`,
-        `Сумма: <b>${order.totalRub} RUB</b>`,
-        `Статус: <b>${order.status}</b>`,
+        `Number: <b>${order.orderNumber}</b>`,
+        `Recipient: @${order.recipientUsername}`,
+        `Amount: <b>${order.totalRub} RUB / ${order.totalUsd} USD</b>`,
+        `Status: <b>${order.status}</b>`,
         "",
-        payments.length > 0
-          ? "Выберите счет Crypto Bot для оплаты. Статус изменится после подтверждения webhook."
-          : "Заказ создан, но счета Crypto Bot не удалось создать. Напишите в поддержку или попробуйте позже.",
+        "Choose payment method:",
       ].join("\n"),
       {
         parse_mode: "HTML",
-        reply_markup: payments.length > 0 ? cryptoInvoiceInlineKeyboard(payments) : storeInlineKeyboard(),
+        reply_markup: paymentMethodInlineKeyboard(order.id),
       },
     );
   } catch (error) {
     logBotApiError("Failed to create bot order", error);
     await ctx.reply(
-      "Не получилось создать заказ. Мы уже записали причину в логах бота. Попробуйте еще раз чуть позже или напишите в поддержку.",
+      "РќРµ РїРѕР»СѓС‡РёР»РѕСЃСЊ СЃРѕР·РґР°С‚СЊ Р·Р°РєР°Р·. РњС‹ СѓР¶Рµ Р·Р°РїРёСЃР°Р»Рё РїСЂРёС‡РёРЅСѓ РІ Р»РѕРіР°С… Р±РѕС‚Р°. РџРѕРїСЂРѕР±СѓР№С‚Рµ РµС‰Рµ СЂР°Р· С‡СѓС‚СЊ РїРѕР·Р¶Рµ РёР»Рё РЅР°РїРёС€РёС‚Рµ РІ РїРѕРґРґРµСЂР¶РєСѓ.",
       { reply_markup: storeInlineKeyboard() },
     );
   }
@@ -252,41 +309,43 @@ function ordersWithPaymentKeyboard(orders: Array<{ orderNumber: string; currentP
     if (payment?.payUrl && payment.asset && payment.status !== "paid") {
       keyboard.url(`${order.orderNumber} · ${payment.asset}`, payment.payUrl).row();
       hasPaymentButtons = true;
+    } else if (payment?.provider === "manual_wallet_transfer" && payment.status !== "paid") {
+      keyboard.text(`${order.orderNumber} · I paid`, `manual:paid:${payment.id}`).row();
+      hasPaymentButtons = true;
     }
   }
 
-  keyboard.text("Обновить", "orders:list");
+  keyboard.text("Refresh", "orders:list");
 
   return hasPaymentButtons ? keyboard : storeInlineKeyboard();
 }
-
 async function showOrders(ctx: Context) {
   try {
     const { orders } = await listBotOrders(getTelegramUser(ctx));
 
     if (orders.length === 0) {
-      await ctx.reply("У вас пока нет заказов.", { reply_markup: storeInlineKeyboard() });
+      await ctx.reply("РЈ РІР°СЃ РїРѕРєР° РЅРµС‚ Р·Р°РєР°Р·РѕРІ.", { reply_markup: storeInlineKeyboard() });
       return;
     }
 
     const lines = orders.slice(0, 5).flatMap((order) => [
       `<b>${order.orderNumber}</b>`,
-      `Получатель: @${order.recipientUsername}`,
-      `Сумма: ${order.totalRub} RUB`,
-      `Статус: ${order.status}`,
+      `РџРѕР»СѓС‡Р°С‚РµР»СЊ: @${order.recipientUsername}`,
+      `Amount: ${order.totalRub} RUB / ${order.totalUsd} USD`,
+      `РЎС‚Р°С‚СѓСЃ: ${order.status}`,
       order.currentPayment
-        ? `Оплата: ${order.currentPayment.status} ${order.currentPayment.asset ?? ""}`.trim()
-        : "Оплата: invoice ещё нет",
+        ? `РћРїР»Р°С‚Р°: ${order.currentPayment.status} ${order.currentPayment.asset ?? ""}`.trim()
+        : "РћРїР»Р°С‚Р°: invoice РµС‰С‘ РЅРµС‚",
       "",
     ]);
 
-    await ctx.reply(["<b>Ваши последние заказы</b>", "", ...lines].join("\n"), {
+    await ctx.reply(["<b>Р’Р°С€Рё РїРѕСЃР»РµРґРЅРёРµ Р·Р°РєР°Р·С‹</b>", "", ...lines].join("\n"), {
       parse_mode: "HTML",
       reply_markup: ordersWithPaymentKeyboard(orders.slice(0, 5)),
     });
   } catch (error) {
     logBotApiError("Failed to load bot orders", error);
-    await ctx.reply("Не получилось загрузить заказы. Попробуйте еще раз чуть позже.", {
+    await ctx.reply("РќРµ РїРѕР»СѓС‡РёР»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ Р·Р°РєР°Р·С‹. РџРѕРїСЂРѕР±СѓР№С‚Рµ РµС‰Рµ СЂР°Р· С‡СѓС‚СЊ РїРѕР·Р¶Рµ.", {
       reply_markup: storeInlineKeyboard(),
     });
   }
@@ -297,7 +356,7 @@ bot.command("start", async (ctx) => {
 });
 
 bot.command("shop", async (ctx) => {
-  await ctx.reply("Выберите, что хотите купить:", {
+  await ctx.reply("Р’С‹Р±РµСЂРёС‚Рµ, С‡С‚Рѕ С…РѕС‚РёС‚Рµ РєСѓРїРёС‚СЊ:", {
     reply_markup: storeInlineKeyboard(),
   });
 });
@@ -320,19 +379,19 @@ bot.command("support", async (ctx) => {
   });
 });
 
-bot.hears("Открыть магазин", async (ctx) => {
-  await ctx.reply("Выберите, что хотите купить:", { reply_markup: storeInlineKeyboard() });
+bot.hears("РћС‚РєСЂС‹С‚СЊ РјР°РіР°Р·РёРЅ", async (ctx) => {
+  await ctx.reply("Р’С‹Р±РµСЂРёС‚Рµ, С‡С‚Рѕ С…РѕС‚РёС‚Рµ РєСѓРїРёС‚СЊ:", { reply_markup: storeInlineKeyboard() });
 });
 
-bot.hears("Купить звёзды", async (ctx) => {
+bot.hears("РљСѓРїРёС‚СЊ Р·РІС‘Р·РґС‹", async (ctx) => {
   await startStarsOrder(ctx);
 });
 
-bot.hears("Купить Premium", async (ctx) => {
+bot.hears("РљСѓРїРёС‚СЊ Premium", async (ctx) => {
   await startPremiumOrder(ctx);
 });
 
-bot.hears("Мои заказы", async (ctx) => {
+bot.hears("РњРѕРё Р·Р°РєР°Р·С‹", async (ctx) => {
   await showOrders(ctx);
 });
 
@@ -343,13 +402,32 @@ bot.hears("FAQ", async (ctx) => {
   });
 });
 
-bot.hears("Поддержка", async (ctx) => {
+bot.hears("РџРѕРґРґРµСЂР¶РєР°", async (ctx) => {
   await ctx.reply(supportMessage, {
     parse_mode: "HTML",
     reply_markup: supportInlineKeyboard(),
   });
 });
 
+
+bot.hears("Buy Stars", async (ctx) => {
+  await startStarsOrder(ctx);
+});
+
+bot.hears("Buy Premium", async (ctx) => {
+  await startPremiumOrder(ctx);
+});
+
+bot.hears("My orders", async (ctx) => {
+  await showOrders(ctx);
+});
+
+bot.hears("Support", async (ctx) => {
+  await ctx.reply(supportMessage, {
+    parse_mode: "HTML",
+    reply_markup: supportInlineKeyboard(),
+  });
+});
 bot.callbackQuery("buy:stars", async (ctx) => {
   await ctx.answerCallbackQuery();
   await startStarsOrder(ctx);
@@ -373,14 +451,40 @@ bot.callbackQuery("faq:open", async (ctx) => {
   });
 });
 
+
+bot.callbackQuery(/^pay:crypto:(.+)$/, async (ctx) => {
+  await ctx.answerCallbackQuery();
+  const orderId = ctx.match[1];
+  if (!orderId) return;
+  await sendCryptoPaymentOptions(ctx, orderId);
+});
+
+bot.callbackQuery(/^pay:wallet:(.+)$/, async (ctx) => {
+  await ctx.answerCallbackQuery();
+  const orderId = ctx.match[1];
+  if (!orderId) return;
+  await sendManualWalletPayment(ctx, orderId);
+});
+
+bot.callbackQuery(/^manual:paid:(.+)$/, async (ctx) => {
+  await ctx.answerCallbackQuery();
+  const userId = getUserId(ctx);
+  const paymentId = ctx.match[1];
+  if (!userId || !paymentId) {
+    return;
+  }
+
+  manualPaymentDrafts.set(userId, paymentId);
+  await ctx.reply("Send tx hash / transaction id for this transfer. If you do not have it, send '-' and admin will verify manually.");
+});
 bot.callbackQuery("order:cancel", async (ctx) => {
   const userId = getUserId(ctx);
   if (userId) {
     drafts.delete(userId);
   }
 
-  await ctx.answerCallbackQuery("Заказ отменён");
-  await ctx.reply("Оформление отменено.", { reply_markup: storeInlineKeyboard() });
+  await ctx.answerCallbackQuery("Р—Р°РєР°Р· РѕС‚РјРµРЅС‘РЅ");
+  await ctx.reply("РћС„РѕСЂРјР»РµРЅРёРµ РѕС‚РјРµРЅРµРЅРѕ.", { reply_markup: storeInlineKeyboard() });
 });
 
 bot.callbackQuery("comment:skip", async (ctx) => {
@@ -396,19 +500,36 @@ bot.callbackQuery(/^qty:(\d+)$/, async (ctx) => {
 
 bot.on("message:text", async (ctx) => {
   const userId = getUserId(ctx);
+  const text = ctx.message.text.trim();
+  const manualPaymentId = userId ? manualPaymentDrafts.get(userId) : undefined;
+
+  if (userId && manualPaymentId) {
+    try {
+      const txHash = text === "-" ? "" : text;
+      const { order } = await confirmBotManualWalletPayment({ paymentId: manualPaymentId, txHash }, getTelegramUser(ctx));
+      manualPaymentDrafts.delete(userId);
+      await ctx.reply(
+        `Payment submitted for order <b>${order.orderNumber}</b>. Status: <b>${order.status}</b>. Admin will verify it manually.`,
+        { parse_mode: "HTML", reply_markup: storeInlineKeyboard() },
+      );
+    } catch (error) {
+      logBotApiError("Failed to submit manual wallet payment", error);
+      await ctx.reply("Could not submit payment confirmation. Try again or contact support.");
+    }
+    return;
+  }
+
   const draft = userId ? drafts.get(userId) : undefined;
 
   if (!userId || !draft) {
     return;
   }
 
-  const text = ctx.message.text.trim();
-
   if (draft.step === "quantity") {
     const quantity = parseStarsQuantity(text);
 
     if (!quantity) {
-      await ctx.reply("Введите целое число от 50 или выберите готовое количество:", {
+      await ctx.reply("Р’РІРµРґРёС‚Рµ С†РµР»РѕРµ С‡РёСЃР»Рѕ РѕС‚ 50 РёР»Рё РІС‹Р±РµСЂРёС‚Рµ РіРѕС‚РѕРІРѕРµ РєРѕР»РёС‡РµСЃС‚РІРѕ:", {
         reply_markup: quantityInlineKeyboard(),
       });
       return;
@@ -422,12 +543,12 @@ bot.on("message:text", async (ctx) => {
     const recipient = normalizeRecipient(text);
 
     if (!recipient) {
-      await ctx.reply("Отправьте @username или Telegram ID получателя.");
+      await ctx.reply("РћС‚РїСЂР°РІСЊС‚Рµ @username РёР»Рё Telegram ID РїРѕР»СѓС‡Р°С‚РµР»СЏ.");
       return;
     }
 
     drafts.set(userId, { ...draft, recipient, step: "comment" });
-    await ctx.reply("Комментарий к заказу? Если не нужен, нажмите «Пропустить».", {
+    await ctx.reply("РљРѕРјРјРµРЅС‚Р°СЂРёР№ Рє Р·Р°РєР°Р·Сѓ? Р•СЃР»Рё РЅРµ РЅСѓР¶РµРЅ, РЅР°Р¶РјРёС‚Рµ В«РџСЂРѕРїСѓСЃС‚РёС‚СЊВ».", {
       reply_markup: commentInlineKeyboard(),
     });
     return;
@@ -468,6 +589,7 @@ function createHealthApp() {
       status: "ok",
       service: "bot",
       mode: env.BOT_MODE,
+      webhookPath: env.BOT_MODE === "webhook" ? botWebhookPath : undefined,
     });
   });
 
@@ -491,24 +613,27 @@ async function start() {
   await configureBotMenu();
 
   if (env.BOT_MODE === "webhook") {
-    if (!env.BOT_WEBHOOK_URL) {
-      throw new Error("BOT_WEBHOOK_URL is required for webhook mode");
+    if (!botWebhookUrl) {
+      throw new Error("BOT_PUBLIC_URL or BOT_WEBHOOK_URL is required for webhook mode");
     }
 
     await bot.api.setWebhook(
-      env.BOT_WEBHOOK_URL,
+      botWebhookUrl,
       env.BOT_WEBHOOK_SECRET ? { secret_token: env.BOT_WEBHOOK_SECRET } : undefined,
     );
+    console.log(`Telegram webhook configured: ${botWebhookUrl}`);
 
     const app = createHealthApp();
-    app.use(express.json());
-    app.use(
+    app.post(
+      botWebhookPath,
+      express.json(),
       webhookCallback(
         bot,
         "express",
         env.BOT_WEBHOOK_SECRET ? { secretToken: env.BOT_WEBHOOK_SECRET } : undefined,
       ),
     );
+    console.log(`Telegram webhook endpoint is listening on POST ${botWebhookPath}`);
     listenHttp(app);
     return;
   }

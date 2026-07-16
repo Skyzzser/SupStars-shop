@@ -1,4 +1,5 @@
-import type { CryptoAsset, OrderStatus, ProductType } from "./schemas.js";
+﻿import type { CryptoAsset, OrderStatus, PaymentStatus, ProductType } from "./schemas.js";
+import type { PricingBreakdown } from "./pricing.js";
 
 export type ProductDto = {
   id: string;
@@ -35,16 +36,26 @@ export type OrderStatusHistoryDto = {
   actorTelegramId: string | null;
 };
 
+export type ManualWalletPaymentDetailsDto = {
+  network: string;
+  asset: string;
+  address: string;
+  memo: string | null;
+  txHash: string | null;
+  instructions: string | null;
+};
+
 export type PaymentDto = {
   id: string;
   provider: string;
   providerPaymentId: string | null;
-  status: string;
-  asset: CryptoAsset | null;
+  status: PaymentStatus | string;
+  asset: CryptoAsset | string | null;
   amount: number | null;
   payUrl: string | null;
   amountRub: number;
   amountUsd: number;
+  manualWallet: ManualWalletPaymentDetailsDto | null;
   paidAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -59,6 +70,7 @@ export type OrderDto = {
   internalNote?: string | null;
   totalRub: number;
   totalUsd: number;
+  pricing: PricingBreakdown;
   items: OrderItemDto[];
   payments: PaymentDto[];
   currentPayment: PaymentDto | null;

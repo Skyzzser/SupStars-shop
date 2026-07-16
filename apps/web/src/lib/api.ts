@@ -1,5 +1,13 @@
-import type { AdminOrderDto, CurrentUserDto, OrderDto, PaymentDto, ProductDto } from "@suupstars/shared";
-import type { CreateCryptoInvoiceRequest, CreateOrderRequest, OrderStatus, UpdateOrderStatusRequest } from "@suupstars/shared";
+﻿import type { AdminOrderDto, CurrentUserDto, OrderDto, PaymentDto, ProductDto } from "@suupstars/shared";
+import type {
+  ConfirmManualWalletPaymentRequest,
+  CreateCryptoInvoiceRequest,
+  CreateManualWalletPaymentRequest,
+  CreateOrderRequest,
+  OrderStatus,
+  UpdateOrderStatusRequest,
+  VerifyManualWalletPaymentRequest,
+} from "@suupstars/shared";
 import { getTelegramInitData } from "./telegram";
 
 const API_URL = normalizeApiUrl(process.env.NEXT_PUBLIC_API_URL);
@@ -86,7 +94,7 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
     if (!response.ok) {
       const payload = (await response.json().catch(() => ({}))) as ApiErrorPayload;
       if (payload.error?.code === "AUTH_REQUIRED") {
-        throw new Error("Откройте Mini App через Telegram, чтобы оформить заказ.");
+        throw new Error("Open the Mini App through Telegram to create an order.");
       }
       throw new Error(payload.error?.message ?? `API request failed with status ${response.status}`);
     }
@@ -112,6 +120,16 @@ export const api = {
       method: "POST",
       body: JSON.stringify(input),
     }),
+  createManualWalletPayment: (input: CreateManualWalletPaymentRequest) =>
+    apiFetch<{ order: OrderDto; payment: PaymentDto }>("/payments/manual-wallet/create", {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
+  confirmManualWalletPayment: (input: ConfirmManualWalletPaymentRequest) =>
+    apiFetch<{ order: OrderDto; payment: PaymentDto }>("/payments/manual-wallet/confirm", {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
   myOrders: () => apiFetch<{ orders: OrderDto[] }>("/orders/me"),
   order: (id: string) => apiFetch<{ order: OrderDto }>(`/orders/${id}`),
   cancelOrder: (id: string) =>
@@ -129,5 +147,10 @@ export const api = {
     apiFetch<{ order: AdminOrderDto }>(`/admin/orders/${id}/note`, {
       method: "PATCH",
       body: JSON.stringify({ internalNote }),
+    }),
+  adminVerifyManualWalletPayment: (input: VerifyManualWalletPaymentRequest) =>
+    apiFetch<{ order: AdminOrderDto; payment: PaymentDto }>("/admin/payments/manual/verify", {
+      method: "PATCH",
+      body: JSON.stringify(input),
     }),
 };

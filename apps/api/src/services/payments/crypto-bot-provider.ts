@@ -1,4 +1,4 @@
-import { createHash, createHmac, timingSafeEqual } from "node:crypto";
+﻿import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import type { CryptoAsset } from "@suupstars/shared";
 import { env } from "../../config/env.js";
 import { ApiError } from "../../lib/http.js";
@@ -6,7 +6,7 @@ import { productTypeLabel } from "../orders.service.js";
 import {
   CRYPTO_BOT_PROVIDER,
   type CryptoWebhookUpdate,
-  type PaymentProvider,
+  type CryptoPaymentProvider,
   type PaymentProviderInvoice,
   type PayableOrder,
 } from "./types.js";
@@ -47,7 +47,7 @@ type PriceBasis = {
 
 const REQUEST_TIMEOUT_MS = 10000;
 
-export class CryptoBotPaymentProvider implements PaymentProvider {
+export class CryptoBotPaymentProvider implements CryptoPaymentProvider {
   readonly name = CRYPTO_BOT_PROVIDER;
 
   async createInvoice(input: { order: PayableOrder; asset: CryptoAsset }): Promise<PaymentProviderInvoice> {

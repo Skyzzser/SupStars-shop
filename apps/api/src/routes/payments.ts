@@ -1,10 +1,16 @@
-import { Router } from "express";
-import { createCryptoInvoiceSchema } from "@suupstars/shared";
+﻿import { Router } from "express";
+import { confirmManualWalletPaymentSchema, createCryptoInvoiceSchema, createManualWalletPaymentSchema } from "@suupstars/shared";
 import { ApiError } from "../lib/http.js";
 import { asyncHandler } from "../middleware/async-handler.js";
 import { requireTelegramUser } from "../middleware/auth.js";
 import { orderToDto } from "../services/mapper.js";
-import { confirmCryptoWebhook, createCryptoInvoice, paymentToPublicDto } from "../services/payments/payments.service.js";
+import {
+  confirmCryptoWebhook,
+  confirmManualWalletPayment,
+  createCryptoInvoice,
+  createManualWalletPayment,
+  paymentToPublicDto,
+} from "../services/payments/payments.service.js";
 
 export const paymentsRouter = Router();
 
@@ -20,6 +26,42 @@ paymentsRouter.post(
     const result = await createCryptoInvoice({ ...input, user: req.authUser });
 
     res.status(201).json({
+      order: orderToDto(result.order),
+      payment: paymentToPublicDto(result.payment),
+    });
+  }),
+);
+
+paymentsRouter.post(
+  "/manual-wallet/create",
+  requireTelegramUser,
+  asyncHandler(async (req, res) => {
+    if (!req.authUser) {
+      throw new ApiError(401, "Auth required", "AUTH_REQUIRED");
+    }
+
+    const input = createManualWalletPaymentSchema.parse(req.body);
+    const result = await createManualWalletPayment({ ...input, user: req.authUser });
+
+    res.status(201).json({
+      order: orderToDto(result.order),
+      payment: paymentToPublicDto(result.payment),
+    });
+  }),
+);
+
+paymentsRouter.post(
+  "/manual-wallet/confirm",
+  requireTelegramUser,
+  asyncHandler(async (req, res) => {
+    if (!req.authUser) {
+      throw new ApiError(401, "Auth required", "AUTH_REQUIRED");
+    }
+
+    const input = confirmManualWalletPaymentSchema.parse(req.body);
+    const result = await confirmManualWalletPayment({ ...input, user: req.authUser });
+
+    res.json({
       order: orderToDto(result.order),
       payment: paymentToPublicDto(result.payment),
     });

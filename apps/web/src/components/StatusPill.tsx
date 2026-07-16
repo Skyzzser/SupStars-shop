@@ -1,20 +1,22 @@
-import type { OrderStatus } from "@suupstars/shared";
+﻿import type { OrderStatus } from "@suupstars/shared";
 import { clsx } from "clsx";
 
 const labels: Record<OrderStatus, string> = {
-  pending: "Черновик",
-  awaiting_payment: "Ожидает оплаты",
-  paid: "Оплачен",
-  processing: "В обработке",
-  completed: "Выполнен",
-  failed: "Ошибка",
-  cancelled: "Отменен",
-  refunded: "Возврат",
+  pending: "Draft",
+  awaiting_payment: "Waiting payment",
+  awaiting_manual_verification: "Admin check",
+  paid: "Paid",
+  processing: "Processing",
+  completed: "Completed",
+  failed: "Failed",
+  cancelled: "Cancelled",
+  refunded: "Refunded",
 };
 
 const tone: Record<OrderStatus, string> = {
   pending: "bg-slate-500/20 text-slate-200",
   awaiting_payment: "bg-amber-500/20 text-amber-200",
+  awaiting_manual_verification: "bg-orange-500/20 text-orange-200",
   paid: "bg-blue-500/20 text-blue-200",
   processing: "bg-cyan-500/20 text-cyan-200",
   completed: "bg-emerald-500/20 text-emerald-200",

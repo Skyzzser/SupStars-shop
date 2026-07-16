@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
-import { env, adminTelegramIds } from "../config/env.js";
+import { env, adminTelegramIds, adminTelegramUsernames } from "../config/env.js";
 import { prisma } from "../db/prisma.js";
 import { ApiError } from "../lib/http.js";
 import { validateTelegramInitData } from "../lib/telegram-init-data.js";
@@ -38,7 +38,10 @@ export async function requireTelegramUser(req: Request, _res: Response, next: Ne
     })();
 
     const telegramId = BigInt(telegramUser.id);
-    const isAdmin = adminTelegramIds.includes(String(telegramUser.id));
+    const telegramUsername = telegramUser.username?.replace(/^@+/, "").toLowerCase();
+    const isAdmin =
+      adminTelegramIds.includes(String(telegramUser.id)) ||
+      Boolean(telegramUsername && adminTelegramUsernames.includes(telegramUsername));
 
     req.authUser = await prisma.user.upsert({
       where: { telegramId },
