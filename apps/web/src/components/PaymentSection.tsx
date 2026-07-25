@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { CheckCircle, Copy, CreditCard, ExternalLink, RefreshCw, ShieldCheck, WalletCards } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -54,11 +54,11 @@ export function PaymentSection({
 
   return (
     <>
-      <Panel>
+      <Panel className="p-5">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="font-semibold">Payment</h2>
-            <p className="text-sm text-tg-hint">Choose Crypto Bot invoice or manual wallet transfer.</p>
+            <h2 className="font-semibold">Оплата</h2>
+            <p className="mt-1 text-sm text-tg-hint">Выберите счет Crypto Bot или перевод на кошелек.</p>
           </div>
           <WalletCards className="text-tg-hint" size={22} />
         </div>
@@ -68,7 +68,7 @@ export function PaymentSection({
             Crypto Bot
           </Button>
           <Button variant={method === "wallet" ? "primary" : "secondary"} onClick={() => setMethod("wallet")} icon={<WalletCards size={17} />}>
-            Wallet
+            Кошелек
           </Button>
         </div>
 
@@ -76,7 +76,7 @@ export function PaymentSection({
       </Panel>
 
       {method === "crypto" ? (
-        <Panel>
+        <Panel className="p-5">
           <div className="grid grid-cols-2 gap-2">
             {CRYPTO_ASSETS.map((asset) => (
               <Button
@@ -85,20 +85,20 @@ export function PaymentSection({
                 onClick={() => onCreateInvoice(asset)}
                 icon={<CreditCard size={17} />}
               >
-                {createInvoice.isPending ? "Creating..." : `Pay ${asset}`}
+                {createInvoice.isPending ? "Создаем..." : `Оплатить ${asset}`}
               </Button>
             ))}
           </div>
         </Panel>
       ) : (
-        <Panel>
+        <Panel className="p-5">
           <Button
             disabled={!canPay || createManualWallet.isPending}
             onClick={onCreateManualWallet}
             className="w-full"
             icon={<WalletCards size={17} />}
           >
-            {createManualWallet.isPending ? "Preparing..." : visiblePayment ? "Refresh wallet details" : "Show wallet details"}
+            {createManualWallet.isPending ? "Готовим..." : visiblePayment ? "Обновить реквизиты" : "Показать реквизиты"}
           </Button>
         </Panel>
       )}
@@ -111,19 +111,19 @@ export function PaymentSection({
       ) : null}
 
       {isPaid ? (
-        <Panel>
+        <Panel className="p-5">
           <div className="flex items-start gap-3">
             <CheckCircle className="mt-0.5 text-emerald-300" size={22} />
             <div>
-              <h2 className="font-semibold">Payment received</h2>
-              <p className="text-sm text-tg-hint">The order is paid and ready for manual fulfillment.</p>
+              <h2 className="font-semibold">Оплата получена</h2>
+              <p className="text-sm text-tg-hint">Заказ оплачен и готовится к ручной выдаче.</p>
             </div>
           </div>
         </Panel>
       ) : canPay ? (
         <div className="flex items-center justify-center gap-2 text-sm text-tg-hint">
           <RefreshCw size={15} />
-          Crypto Bot updates by webhook; wallet transfers wait for admin verification.
+          Crypto Bot обновляется webhook-ом, перевод проверяет администратор.
         </div>
       ) : null}
     </>
@@ -132,12 +132,12 @@ export function PaymentSection({
 
 function PriceBreakdown({ order }: { order: OrderDto }) {
   return (
-    <div className="mt-4 space-y-2 rounded-md border border-tg-border bg-black/20 p-3 text-sm">
-      <Row label="Base price" value={`${formatRub(order.pricing.subtotalRub)} / ${formatUsd(order.pricing.subtotalUsd)}`} />
+    <div className="mt-4 space-y-2 rounded-lg border border-white/10 bg-black/25 p-3 text-sm">
+      <Row label="Стоимость" value={`${formatRub(order.pricing.subtotalRub)} / ${formatUsd(order.pricing.subtotalUsd)}`} />
       {order.pricing.serviceFeeApplied ? (
-        <Row label="Service fee" value={`${formatRub(order.pricing.serviceFeeRub)} / ${formatUsd(order.pricing.serviceFeeUsd)}`} />
+        <Row label="Сервисный сбор" value={`${formatRub(order.pricing.serviceFeeRub)} / ${formatUsd(order.pricing.serviceFeeUsd)}`} />
       ) : null}
-      <Row label="Total" value={`${formatRub(order.totalRub)} / ${formatUsd(order.totalUsd)}`} strong />
+      <Row label="Итого" value={`${formatRub(order.totalRub)} / ${formatUsd(order.totalUsd)}`} strong />
     </div>
   );
 }
@@ -155,16 +155,16 @@ function InvoiceCard({ payment, isPaid }: { payment: PaymentDto; isPaid: boolean
   const paid = payment.status === "paid" || isPaid;
 
   return (
-    <Panel>
+    <Panel className="p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="font-semibold">{payment.asset ?? "Crypto"} invoice</h2>
+          <h2 className="font-semibold">Счет {payment.asset ?? "Crypto"}</h2>
           <p className="text-sm text-tg-hint">
-            {payment.amount && payment.asset ? `${payment.amount} ${payment.asset}` : "Amount is being prepared"}
+            {payment.amount && payment.asset ? `${payment.amount} ${payment.asset}` : "Сумма готовится"}
           </p>
         </div>
-        <span className="rounded-md bg-amber-500/20 px-2.5 py-1 text-xs font-semibold text-amber-200">
-          {paid ? "Paid" : payment.status === "expired" ? "Expired" : "Waiting"}
+        <span className="rounded-lg bg-amber-500/20 px-2.5 py-1 text-xs font-semibold text-amber-200">
+          {paid ? "Оплачен" : payment.status === "expired" ? "Истек" : "Ожидает"}
         </span>
       </div>
 
@@ -173,9 +173,9 @@ function InvoiceCard({ payment, isPaid }: { payment: PaymentDto; isPaid: boolean
           href={payment.payUrl}
           target="_blank"
           rel="noreferrer"
-          className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-tg-button px-4 text-sm font-semibold text-tg-buttonText transition"
+          className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-[#34b7f1] to-[#69d6ff] px-5 text-sm font-semibold text-white transition"
         >
-          Open invoice <ExternalLink size={17} />
+          Открыть счет <ExternalLink size={17} />
         </a>
       ) : null}
     </Panel>
@@ -203,26 +203,26 @@ function ManualWalletCard({
   }
 
   if (!details) {
-    return <ErrorState message="Wallet details are unavailable. Check MANUAL_WALLET_* env on the API." />;
+    return <ErrorState message="Реквизиты недоступны. Проверьте MANUAL_WALLET_* env в API." />;
   }
 
   return (
-    <Panel>
+    <Panel className="p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="font-semibold">Wallet transfer</h2>
+          <h2 className="font-semibold">Перевод на кошелек</h2>
           <p className="text-sm text-tg-hint">{details.network} · {details.asset}</p>
         </div>
-        <span className="rounded-md bg-amber-500/20 px-2.5 py-1 text-xs font-semibold text-amber-200">
-          {paid ? "Paid" : waiting ? "Admin check" : payment.status === "rejected" ? "Rejected" : "Waiting transfer"}
+        <span className="rounded-lg bg-amber-500/20 px-2.5 py-1 text-xs font-semibold text-amber-200">
+          {paid ? "Оплачен" : waiting ? "Проверка" : payment.status === "rejected" ? "Отклонен" : "Ждем перевод"}
         </span>
       </div>
 
       <div className="mt-4 space-y-2 text-sm">
-        <Row label="Amount" value={`${payment.amount ?? payment.amountUsd} ${payment.asset ?? details.asset}`} strong />
-        <CopyRow label="Address" value={details.address} />
+        <Row label="Сумма" value={`${payment.amount ?? payment.amountUsd} ${payment.asset ?? details.asset}`} strong />
+        <CopyRow label="Адрес" value={details.address} />
         {details.memo ? <CopyRow label="Memo" value={details.memo} /> : null}
-        {details.instructions ? <p className="rounded-md bg-black/20 p-3 text-tg-hint">{details.instructions}</p> : null}
+        {details.instructions ? <p className="rounded-lg bg-black/25 p-3 text-tg-hint">{details.instructions}</p> : null}
       </div>
 
       {!paid && !waiting ? (
@@ -232,18 +232,18 @@ function ManualWalletCard({
             <input
               value={txHash}
               onChange={(event) => setTxHash(event.target.value)}
-              placeholder="Optional, but helps admin verify faster"
-              className="h-12 w-full rounded-md border border-tg-border bg-black/20 px-3 text-base outline-none focus:border-tg-button"
+              placeholder="Необязательно, но ускорит проверку"
+              className="h-12 w-full rounded-lg border border-tg-border bg-black/25 px-3 text-base outline-none focus:border-tg-button"
             />
           </label>
           <Button disabled={confirmManual.isPending} onClick={onConfirm} className="w-full" icon={<ShieldCheck size={17} />}>
-            {confirmManual.isPending ? "Submitting..." : "I paid"}
+            {confirmManual.isPending ? "Отправляем..." : "Я оплатил"}
           </Button>
           {confirmManual.isError ? <ErrorState message={confirmManual.error.message} /> : null}
         </div>
       ) : null}
 
-      {waiting ? <p className="mt-4 text-sm text-tg-hint">Waiting for admin verification. The order will become paid only after approval.</p> : null}
+      {waiting ? <p className="mt-4 text-sm text-tg-hint">Ждем проверку администратора. После подтверждения заказ станет оплаченным.</p> : null}
     </Panel>
   );
 }
@@ -254,10 +254,10 @@ function CopyRow({ label, value }: { label: string; value: string }) {
   }
 
   return (
-    <div className="rounded-md bg-black/20 p-3">
+    <div className="rounded-lg bg-black/25 p-3">
       <div className="mb-1 flex items-center justify-between gap-2 text-tg-hint">
         <span>{label}</span>
-        <button type="button" onClick={copy} className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-tg-border">
+        <button type="button" onClick={copy} className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-tg-border">
           <Copy size={14} />
         </button>
       </div>

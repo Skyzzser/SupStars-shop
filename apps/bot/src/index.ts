@@ -129,7 +129,7 @@ async function startStarsOrder(ctx: Context) {
   if (!userId) return;
 
   drafts.set(userId, { productType: "stars", step: "quantity", quantity: 50 });
-  await safeReply(ctx, "Сколько Telegram Stars хотите купить? Минимум 50. Можно написать число или выбрать кнопку:", {
+  await safeReply(ctx, "Сколько Telegram Stars хотите купить? Минимум 50. Напишите число или выберите кнопку:", {
     reply_markup: quantityInlineKeyboard(),
   });
 }
@@ -176,7 +176,7 @@ async function sendCryptoPaymentOptions(ctx: Context, orderId: string) {
       ctx,
       payments.length > 0
         ? "Выберите счет Crypto Bot. Заказ станет оплаченным только после webhook-подтверждения."
-        : "Не удалось создать счета Crypto Bot. Попробуйте перевод на кошелек или напишите в поддержку.",
+        : "Не удалось создать счета Crypto Bot. Попробуйте перевод на кошелек или напишите в поддержку @SuupStarbot.",
       { reply_markup: payments.length > 0 ? cryptoInvoiceInlineKeyboard(payments) : storeInlineKeyboard() },
     );
   } catch (error) {
@@ -196,7 +196,7 @@ async function sendManualWalletPayment(ctx: Context, orderId: string) {
     });
   } catch (error) {
     logBotApiError("Failed to create manual wallet payment", error);
-    await safeReply(ctx, "Не удалось подготовить реквизиты кошелька. Напишите в поддержку или попробуйте Crypto Bot.", {
+    await safeReply(ctx, "Не удалось подготовить реквизиты кошелька. Напишите в @SuupStarbot или попробуйте Crypto Bot.", {
       reply_markup: storeInlineKeyboard(),
     });
   }
@@ -205,7 +205,7 @@ async function sendManualWalletPayment(ctx: Context, orderId: string) {
 function formatManualWalletMessage(orderNumber: string, payment: PaymentDto) {
   const wallet = payment.manualWallet;
   if (!wallet) {
-    return "Реквизиты кошелька недоступны. Напишите в поддержку.";
+    return "Реквизиты кошелька недоступны. Напишите в поддержку @SuupStarbot.";
   }
 
   return [
@@ -219,7 +219,7 @@ function formatManualWalletMessage(orderNumber: string, payment: PaymentDto) {
     wallet.memo ? `Memo: <code>${wallet.memo}</code>` : "",
     wallet.instructions ? `Важно: ${wallet.instructions}` : "",
     "",
-    "После перевода нажмите <b>Я оплатил</b> и отправьте tx hash / transaction id. Заказ станет оплаченным только после проверки администратором.",
+    "После перевода нажмите <b>Я оплатил</b> и отправьте tx hash / transaction id. Заказ станет оплаченным после проверки администратором.",
   ]
     .filter(Boolean)
     .join("\n");
@@ -244,7 +244,7 @@ async function createOrderFromDraft(ctx: Context, comment = "") {
     await safeReply(
       ctx,
       [
-        "✅ <b>Заказ создан</b>",
+        "<b>Заказ создан</b>",
         "",
         `Номер: <b>${order.orderNumber}</b>`,
         `Получатель: @${order.recipientUsername}`,
@@ -257,7 +257,7 @@ async function createOrderFromDraft(ctx: Context, comment = "") {
     );
   } catch (error) {
     logBotApiError("Failed to create bot order", error);
-    await safeReply(ctx, "Не удалось создать заказ. Попробуйте позже или напишите в поддержку.", {
+    await safeReply(ctx, "Не удалось создать заказ. Попробуйте позже или напишите в @SuupStarbot.", {
       reply_markup: storeInlineKeyboard(),
     });
   }
@@ -279,10 +279,10 @@ function ordersWithPaymentKeyboard(orders: Array<{ orderNumber: string; currentP
   for (const order of orders) {
     const payment = order.currentPayment;
     if (payment?.payUrl && payment.asset && payment.status !== "paid") {
-      keyboard.url(`${order.orderNumber} · ${payment.asset}`, payment.payUrl).row();
+      keyboard.url(`${order.orderNumber} / ${payment.asset}`, payment.payUrl).row();
       hasPaymentButtons = true;
     } else if (payment?.provider === "manual_wallet_transfer" && payment.status !== "paid") {
-      keyboard.text(`${order.orderNumber} · Я оплатил`, `manual:paid:${payment.id}`).row();
+      keyboard.text(`${order.orderNumber} / Я оплатил`, `manual:paid:${payment.id}`).row();
       hasPaymentButtons = true;
     }
   }
@@ -327,12 +327,12 @@ async function handleAdminManualVerification(ctx: Context, action: "approve" | "
     await ctx.answerCallbackQuery(action === "approve" ? "Оплата подтверждена" : "Оплата отклонена");
     await safeReply(
       ctx,
-      `${action === "approve" ? "✅" : "❌"} Manual wallet payment обновлен.\nЗаказ: <b>${result.order.orderNumber}</b>\nСтатус: <b>${result.order.status}</b>`,
+      `${action === "approve" ? "Подтверждено" : "Отклонено"}: ручной перевод обновлен.\nЗаказ: <b>${result.order.orderNumber}</b>\nСтатус: <b>${result.order.status}</b>`,
       { parse_mode: "HTML" },
     );
   } catch (error) {
     logBotApiError("Failed to verify manual wallet payment from admin callback", error);
-    await ctx.answerCallbackQuery({ text: "Не удалось выполнить действие. Проверьте права админа.", show_alert: true }).catch(() => undefined);
+    await ctx.answerCallbackQuery({ text: "Не удалось выполнить действие. Проверьте права администратора.", show_alert: true }).catch(() => undefined);
   }
 }
 
@@ -443,7 +443,7 @@ bot.on("message:text", async (ctx) => {
       );
     } catch (error) {
       logBotApiError("Failed to submit manual wallet payment", error);
-      await safeReply(ctx, "Не удалось отправить подтверждение оплаты. Попробуйте еще раз или напишите в поддержку.");
+      await safeReply(ctx, "Не удалось отправить подтверждение оплаты. Попробуйте еще раз или напишите в @SuupStarbot.");
     }
     return;
   }
@@ -489,7 +489,7 @@ async function configureBotMenu() {
   }
 
   await bot.api.setChatMenuButton({
-    menu_button: { type: "web_app", text: "SupStars", web_app: { url: env.WEB_APP_URL } },
+    menu_button: { type: "web_app", text: "Suup Stars", web_app: { url: env.WEB_APP_URL } },
   });
   console.log(`Telegram Web App menu button configured for ${env.WEB_APP_URL}`);
 }

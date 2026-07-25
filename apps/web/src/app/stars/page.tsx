@@ -1,7 +1,7 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
-import { ShoppingCart } from "lucide-react";
+import { ShoppingCart, Sparkles } from "lucide-react";
 import { calculateStarsPrice, formatRub, formatUsd, STARS_MIN_QUANTITY } from "@suupstars/shared";
 import { useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
@@ -16,30 +16,37 @@ export default function StarsPage() {
 
   return (
     <AppShell title="Telegram Stars">
-      <Panel>
-        <h2 className="font-semibold">Quantity</h2>
-        <p className="mt-1 text-sm text-tg-hint">Minimum order: {STARS_MIN_QUANTITY} Stars.</p>
-        <div className="mt-4">
+      <Panel className="p-5">
+        <div className="flex items-start gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-tg-button/15 text-tg-link">
+            <Sparkles size={22} />
+          </div>
+          <div>
+            <h2 className="font-semibold">Сколько Stars нужно?</h2>
+            <p className="mt-1 text-sm leading-5 text-tg-hint">Минимальный заказ: {STARS_MIN_QUANTITY} Stars.</p>
+          </div>
+        </div>
+        <div className="mt-5">
           <QuantitySelector value={quantity} onChange={setQuantity} />
         </div>
         {!isValid ? (
-          <p className="mt-3 rounded-md bg-red-500/15 px-3 py-2 text-sm text-red-200">
-            Enter at least {STARS_MIN_QUANTITY} Stars.
+          <p className="mt-4 rounded-lg bg-red-500/15 px-3 py-2 text-sm text-red-200">
+            Введите минимум {STARS_MIN_QUANTITY} Stars.
           </p>
         ) : null}
       </Panel>
 
-      <Panel>
-        <div className="space-y-2 rounded-md border border-tg-border bg-black/20 p-3 text-sm">
-          <PriceRow label="Base price" value={`${formatRub(price.subtotalRub)} / ${formatUsd(price.subtotalUsd)}`} />
+      <Panel className="p-5">
+        <div className="space-y-2 rounded-lg border border-white/10 bg-black/25 p-3 text-sm">
+          <PriceRow label="Стоимость" value={`${formatRub(price.subtotalRub)} / ${formatUsd(price.subtotalUsd)}`} />
           {price.serviceFeeApplied ? (
-            <PriceRow label="Service fee" value={`${formatRub(price.serviceFeeRub)} / ${formatUsd(price.serviceFeeUsd)}`} />
+            <PriceRow label="Сервисный сбор" value={`${formatRub(price.serviceFeeRub)} / ${formatUsd(price.serviceFeeUsd)}`} />
           ) : null}
-          <PriceRow label="Total" value={`${formatRub(price.totalRub)} / ${formatUsd(price.totalUsd)}`} strong />
+          <PriceRow label="Итого" value={`${formatRub(price.totalRub)} / ${formatUsd(price.totalUsd)}`} strong />
         </div>
         <Link href={`/checkout?productType=stars&quantity=${quantity}`} className="mt-4 block">
           <Button disabled={!isValid} className="w-full" icon={<ShoppingCart size={18} />}>
-            Checkout
+            Перейти к заказу
           </Button>
         </Link>
       </Panel>

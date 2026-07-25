@@ -8,6 +8,8 @@ export function errorMiddleware(
   res: Response,
   _next: NextFunction,
 ) {
+  void _next;
+
   if (error instanceof ZodError) {
     const details = error.flatten();
 

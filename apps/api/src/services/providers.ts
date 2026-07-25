@@ -21,7 +21,9 @@ export interface PremiumDeliveryProvider {
 }
 
 export class ManualPaymentProvider implements PaymentProvider {
-  async createPaymentIntent(_order: ProviderOrder): Promise<PaymentIntent> {
+  async createPaymentIntent(order: ProviderOrder): Promise<PaymentIntent> {
+    void order;
+
     return {
       provider: "manual",
       status: "manual_required",
@@ -31,13 +33,17 @@ export class ManualPaymentProvider implements PaymentProvider {
 }
 
 export class ManualStarsDeliveryProvider implements StarsDeliveryProvider {
-  async deliverStars(_order: ProviderOrder) {
+  async deliverStars(order: ProviderOrder) {
+    void order;
+
     return { provider: "manual-stars", manualRequired: true };
   }
 }
 
 export class ManualPremiumDeliveryProvider implements PremiumDeliveryProvider {
-  async deliverPremium(_order: ProviderOrder) {
+  async deliverPremium(order: ProviderOrder) {
+    void order;
+
     return { provider: "manual-premium", manualRequired: true };
   }
 }

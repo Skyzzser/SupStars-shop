@@ -11,7 +11,7 @@ export function QuantitySelector({
   onChange: (value: number) => void;
 }) {
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <div className="grid grid-cols-5 gap-2">
         {STARS_PRESETS.map((preset) => (
           <button
@@ -19,10 +19,10 @@ export function QuantitySelector({
             type="button"
             onClick={() => onChange(preset)}
             className={clsx(
-              "min-h-10 rounded-md border px-2 text-sm font-semibold",
+              "min-h-11 rounded-lg border px-2 text-sm font-semibold transition active:scale-[0.98]",
               value === preset
-                ? "border-tg-button bg-tg-button text-tg-buttonText"
-                : "border-tg-border bg-black/20 text-tg-text",
+                ? "border-tg-button bg-tg-button text-tg-buttonText shadow-[0_10px_24px_rgba(52,183,241,0.22)]"
+                : "border-white/10 bg-black/25 text-tg-text",
             )}
           >
             {preset}
@@ -36,7 +36,7 @@ export function QuantitySelector({
           inputMode="numeric"
           value={value}
           onChange={(event) => onChange(Number(event.target.value))}
-          className="h-12 w-full rounded-md border border-tg-border bg-black/20 px-3 text-base outline-none focus:border-tg-button"
+          className="h-12 w-full rounded-lg border border-tg-border bg-black/25 px-3 text-base outline-none focus:border-tg-button"
         />
       </label>
     </div>

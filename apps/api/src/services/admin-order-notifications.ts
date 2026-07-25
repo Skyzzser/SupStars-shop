@@ -11,8 +11,8 @@ type AdminOrderEvent = "created" | "invoice_created" | "manual_payment_created" 
 
 const eventTitle: Record<AdminOrderEvent, string> = {
   created: "Новый заказ",
-  invoice_created: "Создан Crypto Bot invoice",
-  manual_payment_created: "Создан manual wallet payment",
+  invoice_created: "Создан счет Crypto Bot",
+  manual_payment_created: "Создан ручной перевод",
   manual_payment_submitted: "Покупатель отметил перевод как оплаченный",
   paid: "Заказ оплачен",
   cancelled: "Заказ отменен",
@@ -54,8 +54,8 @@ function buildManualPaymentActions(payment: Payment | null): TelegramReplyMarkup
   return {
     inline_keyboard: [
       [
-        { text: "✅ Подтвердить оплату", callback_data: `admin:manual:approve:${payment.id}` },
-        { text: "❌ Отклонить", callback_data: `admin:manual:reject:${payment.id}` },
+        { text: "Подтвердить оплату", callback_data: `admin:manual:approve:${payment.id}` },
+        { text: "Отклонить", callback_data: `admin:manual:reject:${payment.id}` },
       ],
     ],
   };

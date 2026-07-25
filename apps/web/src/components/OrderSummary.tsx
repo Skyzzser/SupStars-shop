@@ -1,4 +1,4 @@
-﻿import type { OrderDto } from "@suupstars/shared";
+import type { OrderDto } from "@suupstars/shared";
 import { formatRub, formatUsd } from "@suupstars/shared";
 import { StatusPill } from "./StatusPill";
 
@@ -11,17 +11,17 @@ export function OrderSummary({ order }: { order: OrderDto }) {
         <div>
           <h2 className="font-semibold">{order.orderNumber}</h2>
           <p className="text-sm text-tg-hint">
-            {item?.title ?? "Order"} · @{order.recipientUsername}
+            {item?.title ?? "Заказ"} · @{order.recipientUsername}
           </p>
         </div>
         <StatusPill status={order.status} />
       </div>
-      <div className="space-y-2 rounded-md border border-tg-border bg-black/20 p-3 text-sm">
-        <Row label="Base" value={`${formatRub(order.pricing.subtotalRub)} / ${formatUsd(order.pricing.subtotalUsd)}`} />
+      <div className="space-y-2 rounded-lg border border-white/10 bg-black/25 p-3 text-sm">
+        <Row label="Стоимость" value={`${formatRub(order.pricing.subtotalRub)} / ${formatUsd(order.pricing.subtotalUsd)}`} />
         {order.pricing.serviceFeeApplied ? (
-          <Row label="Service fee" value={`${formatRub(order.pricing.serviceFeeRub)} / ${formatUsd(order.pricing.serviceFeeUsd)}`} />
+          <Row label="Сервисный сбор" value={`${formatRub(order.pricing.serviceFeeRub)} / ${formatUsd(order.pricing.serviceFeeUsd)}`} />
         ) : null}
-        <Row label="Total" value={`${formatRub(order.totalRub)} / ${formatUsd(order.totalUsd)}`} strong />
+        <Row label="Итого" value={`${formatRub(order.totalRub)} / ${formatUsd(order.totalUsd)}`} strong />
       </div>
     </div>
   );

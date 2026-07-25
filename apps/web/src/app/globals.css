@@ -4,14 +4,14 @@
 
 :root {
   color-scheme: dark;
-  --tg-bg: #0d1117;
-  --tg-surface: #151b23;
-  --tg-text: #f4f7fb;
-  --tg-hint: #8b98a8;
-  --tg-link: #4ea8ff;
-  --tg-button: #2aabee;
+  --tg-bg: #080a10;
+  --tg-surface: rgba(21, 27, 36, 0.78);
+  --tg-text: #f7f9fc;
+  --tg-hint: #9aa6b5;
+  --tg-link: #6bd7ff;
+  --tg-button: #34b7f1;
   --tg-button-text: #ffffff;
-  --tg-border: rgba(255, 255, 255, 0.09);
+  --tg-border: rgba(255, 255, 255, 0.12);
 }
 
 * {
@@ -32,8 +32,9 @@ body {
   overflow-x: hidden;
   background-color: var(--tg-bg);
   background:
-    radial-gradient(circle at top left, rgba(42, 171, 238, 0.16), transparent 34rem),
-    linear-gradient(180deg, #0d1117 0%, #111722 100%);
+    radial-gradient(circle at 18% -8%, rgba(52, 183, 241, 0.22), transparent 18rem),
+    radial-gradient(circle at 96% 10%, rgba(116, 91, 255, 0.16), transparent 17rem),
+    linear-gradient(180deg, #080a10 0%, #101723 48%, #0a0d14 100%);
   color: var(--tg-text);
   color-scheme: dark;
   font-family:
@@ -112,4 +113,13 @@ select:-webkit-autofill {
 
 .safe-bottom {
   padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+}
+
+.glass-panel {
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.105), rgba(255, 255, 255, 0.045)),
+    var(--tg-surface);
+  border: 1px solid var(--tg-border);
+  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.26);
+  backdrop-filter: blur(18px);
 }

@@ -17,10 +17,10 @@ export default function OrdersPage() {
       {orders.data?.orders.length === 0 ? (
         <EmptyState title="Заказов пока нет" text="Созданные заказы появятся здесь вместе с текущим статусом." />
       ) : null}
-      <div className="space-y-3">
+      <div className="space-y-4">
         {orders.data?.orders.map((order) => (
           <Link href={`/orders/${order.id}`} key={order.id} className="block">
-            <Panel>
+            <Panel className="p-5">
               <OrderSummary order={order} />
             </Panel>
           </Link>

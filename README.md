@@ -1,6 +1,8 @@
 # SupStars Store
 
-Full-stack проект для магазина Telegram Stars и Telegram Premium: Mini App, API и Telegram bot `@SupStarssbot`.
+Full-stack проект для магазина Telegram Stars и Telegram Premium: Mini App, API и Telegram bot `@SuupStarbot`.
+
+Поддержка: https://t.me/SuupStarbot
 
 ## Состав
 
@@ -18,12 +20,12 @@ Full-stack проект для магазина Telegram Stars и Telegram Premi
 ## Payment Flow
 
 - Crypto Bot: заказ становится `paid` только после Crypto Pay webhook.
-- Manual wallet transfer: пользователь создает payment session, переводит средства, нажимает `Я оплатил`, optional отправляет tx hash. Заказ становится `awaiting_manual_verification`. Админ подтверждает или отклоняет оплату через admin panel или inline-кнопки в Telegram notification.
+- Manual wallet transfer: пользователь создает payment session, переводит средства, нажимает `Я оплатил` и при желании отправляет tx hash. Заказ становится `awaiting_manual_verification`. Администратор подтверждает или отклоняет оплату через admin panel или inline-кнопки в Telegram notification.
 
 ## Важные статусы
 
-- `awaiting_payment` - заказ ожидает выбора/оплаты.
-- `awaiting_manual_verification` - пользователь отметил wallet transfer как оплаченный, админ проверяет.
+- `awaiting_payment` - заказ ожидает выбора способа оплаты или оплаты.
+- `awaiting_manual_verification` - пользователь отметил wallet transfer как оплаченный, администратор проверяет.
 - `paid` - оплата подтверждена.
 
 ## Env
@@ -38,6 +40,7 @@ API_PUBLIC_URL=https://your-api.example.com
 NEXT_PUBLIC_API_URL=https://your-api.example.com
 ADMIN_IDS=123456789
 ADMIN_USERNAMES=admin_username
+SUPPORT_URL=https://t.me/SuupStarbot
 ```
 
 Manual wallet:
@@ -48,7 +51,7 @@ MANUAL_WALLET_NETWORK=TON
 MANUAL_WALLET_ASSET=USDT
 MANUAL_WALLET_ADDRESS=replace-with-wallet-address
 MANUAL_WALLET_MEMO=
-MANUAL_WALLET_INSTRUCTIONS=Send exact amount and tap I paid after transfer.
+MANUAL_WALLET_INSTRUCTIONS=Отправьте точную сумму и нажмите Я оплатил после перевода.
 ```
 
 Bot webhook:

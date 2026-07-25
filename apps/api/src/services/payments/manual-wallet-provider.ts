@@ -1,4 +1,4 @@
-﻿import { Prisma } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 import { manualWalletConfig } from "../../config/env.js";
 import { ApiError } from "../../lib/http.js";
 import { MANUAL_WALLET_PROVIDER, type ManualPaymentProvider, type ManualWalletPaymentSession, type PayableOrder } from "./types.js";
@@ -8,11 +8,11 @@ export class ManualWalletTransferProvider implements ManualPaymentProvider {
 
   createPaymentSession(input: { order: PayableOrder }): ManualWalletPaymentSession {
     if (!manualWalletConfig.enabled) {
-      throw new ApiError(400, "Manual wallet transfer is disabled", "MANUAL_WALLET_DISABLED");
+      throw new ApiError(400, "Перевод на кошелек отключен", "MANUAL_WALLET_DISABLED");
     }
 
     if (!manualWalletConfig.address) {
-      throw new ApiError(500, "Manual wallet address is not configured", "MANUAL_WALLET_ADDRESS_MISSING");
+      throw new ApiError(500, "Адрес кошелька не настроен", "MANUAL_WALLET_ADDRESS_MISSING");
     }
 
     const amount = input.order.totalUsd.toNumber() > 0 ? input.order.totalUsd.toString() : input.order.totalRub.toString();

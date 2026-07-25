@@ -30,7 +30,7 @@ export default function OrderPage() {
       {order.isError ? <ErrorState message={order.error.message} /> : null}
       {order.data ? (
         <>
-          <Panel>
+          <Panel className="p-5">
             <OrderSummary order={order.data.order} />
             <div className="mt-4 grid gap-2 text-sm">
               <InfoRow label="Товар" value={order.data.order.items[0]?.title ?? "Заказ"} />
@@ -39,7 +39,7 @@ export default function OrderPage() {
               <InfoRow label="Статус" value={statusLabel(order.data.order.status)} />
             </div>
             {order.data.order.comment ? (
-              <p className="mt-3 rounded-md border border-tg-border bg-black/20 p-3 text-sm text-tg-hint">
+              <p className="mt-3 rounded-lg border border-white/10 bg-black/25 p-3 text-sm text-tg-hint">
                 {order.data.order.comment}
               </p>
             ) : null}
@@ -47,7 +47,7 @@ export default function OrderPage() {
 
           <PaymentSection order={order.data.order} onPaymentCreated={() => order.refetch()} />
 
-          <Panel>
+          <Panel className="p-5">
             <h2 className="font-semibold">История статусов</h2>
             <div className="mt-3 space-y-3">
               {order.data.order.statusHistory.map((entry) => (
@@ -83,7 +83,7 @@ export default function OrderPage() {
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-start justify-between gap-3 rounded-md border border-tg-border bg-black/20 px-3 py-2">
+    <div className="flex items-start justify-between gap-3 rounded-lg border border-white/10 bg-black/25 px-3 py-2">
       <span className="text-tg-hint">{label}</span>
       <span className="text-right font-medium">{value}</span>
     </div>

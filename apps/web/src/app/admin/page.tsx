@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import type { OrderStatus, PaymentDto } from "@suupstars/shared";
@@ -31,18 +31,18 @@ export default function AdminPage() {
   if (currentUser.isLoading) {
     return (
       <AppShell title="Admin">
-        <LoadingState text="Checking access..." />
+        <LoadingState text="Проверяем доступ..." />
       </AppShell>
     );
   }
 
   if (currentUser.isError || !isAdmin) {
     return (
-      <AppShell title="Access denied" action={<Lock className="text-tg-hint" />}>
-        <Panel>
-          <h2 className="font-semibold">No admin access</h2>
+      <AppShell title="Доступ закрыт" action={<Lock className="text-tg-hint" />}>
+        <Panel className="p-5">
+          <h2 className="font-semibold">Нет доступа администратора</h2>
           <p className="mt-2 text-sm leading-5 text-tg-hint">
-            This section is available only for admins configured in ADMIN_IDS or ADMIN_USERNAMES.
+            Раздел доступен только администраторам из ADMIN_IDS или ADMIN_USERNAMES.
           </p>
         </Panel>
       </AppShell>
@@ -51,15 +51,15 @@ export default function AdminPage() {
 
   return (
     <AppShell title="Admin" action={<ShieldCheck className="text-tg-link" />}>
-      <Panel>
+      <Panel className="p-5">
         <label className="block">
-          <span className="mb-2 block text-sm text-tg-hint">Status filter</span>
+          <span className="mb-2 block text-sm text-tg-hint">Фильтр по статусу</span>
           <select
             value={status ?? ""}
             onChange={(event) => setStatus(event.target.value ? (event.target.value as OrderStatus) : undefined)}
-            className="h-11 w-full rounded-md border border-tg-border bg-black/20 px-3 outline-none"
+            className="h-11 w-full rounded-lg border border-tg-border bg-black/25 px-3 outline-none"
           >
-            <option value="">All</option>
+            <option value="">Все</option>
             {ORDER_STATUSES.map((item) => (
               <option key={item} value={item}>
                 {item}
@@ -74,19 +74,19 @@ export default function AdminPage() {
       {updateStatus.isError ? <ErrorState message={updateStatus.error.message} /> : null}
       {updateNote.isError ? <ErrorState message={updateNote.error.message} /> : null}
 
-      <div className="space-y-3">
+      <div className="space-y-4">
         {orders.data?.orders.map((order) => {
           const manualPayment = order.payments.find((payment) => payment.provider === MANUAL_PROVIDER);
 
           return (
-            <Panel key={order.id}>
+            <Panel key={order.id} className="p-5">
               <OrderSummary order={order} />
-              <div className="mt-3 rounded-md bg-black/20 p-3 text-sm text-tg-hint">
+              <div className="mt-3 rounded-lg bg-black/25 p-3 text-sm text-tg-hint">
                 <p>
-                  Client: {order.user.username ? `@${order.user.username}` : order.user.telegramId}
+                  Клиент: {order.user.username ? `@${order.user.username}` : order.user.telegramId}
                   {order.user.firstName ? ` · ${order.user.firstName}` : ""}
                 </p>
-                {order.comment ? <p className="mt-1">Comment: {order.comment}</p> : null}
+                {order.comment ? <p className="mt-1">Комментарий: {order.comment}</p> : null}
               </div>
 
               {manualPayment ? <ManualPaymentControls payment={manualPayment} /> : null}
@@ -119,22 +119,22 @@ function ManualPaymentControls({ payment }: { payment: PaymentDto }) {
   }
 
   return (
-    <div className="mt-4 space-y-3 rounded-md border border-tg-border bg-black/20 p-3 text-sm">
+    <div className="mt-4 space-y-3 rounded-lg border border-tg-border bg-black/25 p-3 text-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="font-semibold">Manual wallet payment</p>
+          <p className="font-semibold">Ручной перевод</p>
           <p className="text-tg-hint">{details.network} · {details.asset} · {payment.status}</p>
         </div>
         <p className="text-right font-semibold">{formatRub(payment.amountRub)} / {formatUsd(payment.amountUsd)}</p>
       </div>
-      <Info label="Address" value={details.address} />
+      <Info label="Адрес" value={details.address} />
       {details.memo ? <Info label="Memo" value={details.memo} /> : null}
       {details.txHash ? <Info label="Tx" value={details.txHash} /> : null}
       <input
         value={note}
         onChange={(event) => setNote(event.target.value)}
-        placeholder="Admin note"
-        className="h-11 w-full rounded-md border border-tg-border bg-black/20 px-3 text-sm outline-none"
+        placeholder="Заметка администратора"
+        className="h-11 w-full rounded-lg border border-tg-border bg-black/25 px-3 text-sm outline-none"
       />
       <div className="grid grid-cols-2 gap-2">
         <Button
@@ -142,7 +142,7 @@ function ManualPaymentControls({ payment }: { payment: PaymentDto }) {
           onClick={() => verify.mutate({ paymentId: payment.id, action: "approve", note: note || undefined })}
           icon={<ShieldCheck size={16} />}
         >
-          Approve
+          Подтвердить
         </Button>
         <Button
           variant="danger"
@@ -150,7 +150,7 @@ function ManualPaymentControls({ payment }: { payment: PaymentDto }) {
           onClick={() => verify.mutate({ paymentId: payment.id, action: "reject", note: note || undefined })}
           icon={<XCircle size={16} />}
         >
-          Reject
+          Отклонить
         </Button>
       </div>
       {verify.isError ? <ErrorState message={verify.error.message} /> : null}
@@ -191,7 +191,7 @@ function AdminOrderControls({
         <select
           value={status}
           onChange={(event) => setStatus(event.target.value as OrderStatus)}
-          className="h-10 rounded-md border border-tg-border bg-black/20 px-2 text-sm outline-none"
+          className="h-10 rounded-lg border border-tg-border bg-black/25 px-2 text-sm outline-none"
         >
           {ORDER_STATUSES.map((item) => (
             <option key={item} value={item}>
@@ -203,21 +203,21 @@ function AdminOrderControls({
       <input
         value={note}
         onChange={(event) => setNote(event.target.value)}
-        placeholder="Status change note"
-        className="h-11 w-full rounded-md border border-tg-border bg-black/20 px-3 text-sm outline-none"
+        placeholder="Заметка к смене статуса"
+        className="h-11 w-full rounded-lg border border-tg-border bg-black/25 px-3 text-sm outline-none"
       />
       <Button className="w-full" onClick={() => onStatus(status, note || undefined)}>
-        Update status
+        Обновить статус
       </Button>
       <textarea
         value={internalNote}
         onChange={(event) => setInternalNote(event.target.value)}
         rows={3}
-        placeholder="Internal note"
-        className="w-full resize-none rounded-md border border-tg-border bg-black/20 px-3 py-2 text-sm outline-none"
+        placeholder="Внутренняя заметка"
+        className="w-full resize-none rounded-lg border border-tg-border bg-black/25 px-3 py-2 text-sm outline-none"
       />
       <Button variant="secondary" className="w-full" onClick={() => onNote(internalNote)} icon={<Save size={16} />}>
-        Save note
+        Сохранить заметку
       </Button>
     </div>
   );

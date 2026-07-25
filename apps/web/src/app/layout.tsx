@@ -6,7 +6,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Suup Stars",
-  description: "Telegram Mini App магазин Stars и Premium"
+  description: "Telegram Mini App магазин Stars и Premium",
 };
 
 export const viewport: Viewport = {
@@ -14,7 +14,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: "#0d1117"
+  themeColor: "#080a10",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

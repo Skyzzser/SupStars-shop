@@ -34,7 +34,7 @@ export async function createCryptoInvoice(input: { orderId: string; asset: Crypt
       where: { id: input.orderId, userId: input.user.id },
       include: paymentOrderInclude,
     }),
-    "Order not found",
+    "Заказ не найден",
   );
 
   assertOrderPayable(order.status);
@@ -106,7 +106,7 @@ export async function createManualWalletPayment(input: { orderId: string; user: 
       where: { id: input.orderId, userId: input.user.id },
       include: paymentOrderInclude,
     }),
-    "Order not found",
+    "Заказ не найден",
   );
 
   assertOrderPayable(order.status);
@@ -168,15 +168,15 @@ export async function confirmManualWalletPayment(input: { paymentId: string; txH
       },
       include: { order: { include: { user: true } } },
     }),
-    "Manual payment not found",
+    "Ручной платеж не найден",
   );
 
   if (payment.status === "paid") {
-    throw new ApiError(400, "Payment is already paid", "PAYMENT_ALREADY_PAID");
+    throw new ApiError(400, "Платеж уже оплачен", "PAYMENT_ALREADY_PAID");
   }
 
   if (payment.status === "rejected" || payment.status === "failed") {
-    throw new ApiError(400, "Payment was rejected", "PAYMENT_REJECTED");
+    throw new ApiError(400, "Платеж был отклонен", "PAYMENT_REJECTED");
   }
 
   const updated = await prisma.$transaction(async (tx) => {
@@ -200,7 +200,7 @@ export async function confirmManualWalletPayment(input: { paymentId: string; txH
         statusHistory: {
           create: {
             status: "awaiting_manual_verification",
-            note: input.txHash ? `Manual wallet transfer submitted: ${input.txHash}` : "Manual wallet transfer submitted.",
+            note: input.txHash ? `Ручной перевод отправлен на проверку: ${input.txHash}` : "Ручной перевод отправлен на проверку.",
             actorTelegramId: input.user.telegramId,
           },
         },
@@ -214,7 +214,7 @@ export async function confirmManualWalletPayment(input: { paymentId: string; txH
   await Promise.all([
     notifyUser(
       input.user.telegramId,
-      `Payment for order <b>${updated.order.orderNumber}</b> is waiting for admin verification.`,
+      `Платеж по заказу <b>${updated.order.orderNumber}</b> ожидает проверки администратора.`,
     ),
     notifyAdminsAboutOrderEvent({
       event: "manual_payment_submitted",
@@ -238,11 +238,11 @@ export async function verifyManualWalletPayment(input: {
       where: { id: input.paymentId, provider: MANUAL_WALLET_PROVIDER },
       include: { order: { include: { user: true } } },
     }),
-    "Manual payment not found",
+    "Ручной платеж не найден",
   );
 
   if (payment.status === "paid" && input.action === "approve") {
-    throw new ApiError(400, "Payment is already paid", "PAYMENT_ALREADY_PAID");
+    throw new ApiError(400, "Платеж уже оплачен", "PAYMENT_ALREADY_PAID");
   }
 
   const now = new Date();
@@ -271,7 +271,7 @@ export async function verifyManualWalletPayment(input: {
             status: orderStatus,
             note:
               input.note ??
-              (input.action === "approve" ? "Manual wallet transfer approved by admin." : "Manual wallet transfer rejected by admin."),
+              (input.action === "approve" ? "Ручной перевод подтвержден администратором." : "Ручной перевод отклонен администратором."),
             actorTelegramId: input.admin.telegramId,
           },
         },
@@ -295,14 +295,14 @@ export async function verifyManualWalletPayment(input: {
     await Promise.all([
       notifyUser(
         updated.order.user.telegramId,
-        `Manual payment for order <b>${updated.order.orderNumber}</b> is approved. Status: <b>paid</b>.`,
+        `Ручной платеж по заказу <b>${updated.order.orderNumber}</b> подтвержден. Статус: <b>paid</b>.`,
       ),
       notifyAdminsAboutOrderEvent({ event: "paid", order: updated.order, buyer: updated.order.user, payment: updated.payment }),
     ]);
   } else {
     await notifyUser(
       updated.order.user.telegramId,
-      `Manual payment for order <b>${updated.order.orderNumber}</b> was rejected.${input.note ? `\n${input.note}` : ""}`,
+      `Ручной платеж по заказу <b>${updated.order.orderNumber}</b> отклонен.${input.note ? `\n${input.note}` : ""}`,
     );
   }
 
@@ -333,7 +333,7 @@ export async function confirmCryptoWebhook(input: {
       },
       include: { order: { include: { user: true } } },
     }),
-    "Payment not found",
+    "Платеж не найден",
   );
 
   const paidAt = invoice.paid_at ? new Date(invoice.paid_at) : new Date();
@@ -359,7 +359,7 @@ export async function confirmCryptoWebhook(input: {
         statusHistory: {
           create: {
             status: "paid",
-            note: `Crypto Pay invoice ${invoice.invoice_id} paid in ${invoice.asset ?? payment.asset ?? "crypto"}.`,
+            note: `Счет Crypto Pay ${invoice.invoice_id} оплачен в ${invoice.asset ?? payment.asset ?? "crypto"}.`,
           },
         },
       },
@@ -382,7 +382,7 @@ export function paymentToPublicDto(payment: Payment) {
 
 function assertOrderPayable(status: string) {
   if (terminalOrderStatuses.includes(status)) {
-    throw new ApiError(400, "This order cannot be paid", "ORDER_NOT_PAYABLE");
+    throw new ApiError(400, "Этот заказ нельзя оплатить", "ORDER_NOT_PAYABLE");
   }
 }
 
@@ -405,7 +405,7 @@ async function notifyPaymentSuccess(
   await Promise.all([
     notifyUser(
       order.user.telegramId,
-      `Payment received\n\nOrder: <b>${order.orderNumber}</b>\nAmount: <b>${amount} ${asset}</b>\nStatus: <b>paid</b>`,
+      `Оплата получена\n\nЗаказ: <b>${order.orderNumber}</b>\nСумма: <b>${amount} ${asset}</b>\nСтатус: <b>paid</b>`,
     ),
     notifyAdminsAboutOrderEvent({
       event: "paid",

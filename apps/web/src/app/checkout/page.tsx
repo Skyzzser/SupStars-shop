@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -26,7 +26,7 @@ export default function CheckoutPage() {
   return (
     <Suspense
       fallback={
-        <AppShell title="Checkout">
+        <AppShell title="Оформление">
           <LoadingState />
         </AppShell>
       }
@@ -79,63 +79,63 @@ function CheckoutContent() {
   }
 
   return (
-    <AppShell title="Checkout">
-      <Panel>
+    <AppShell title="Оформление">
+      <Panel className="p-5">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-sm text-tg-hint">Product</p>
+            <p className="text-sm text-tg-hint">Товар</p>
             <h2 className="text-lg font-semibold">{productTitle}</h2>
           </div>
-          <span className="rounded-md bg-black/20 px-3 py-1.5 text-sm">
-            {productType === "stars" ? `${quantity} pcs.` : "1 pc."}
+          <span className="rounded-lg bg-black/25 px-3 py-1.5 text-sm">
+            {productType === "stars" ? `${quantity} шт.` : "1 шт."}
           </span>
         </div>
-        <div className="mt-4 space-y-2 rounded-md border border-tg-border bg-black/20 p-3 text-sm">
-          <PriceRow label="Base price" value={`${formatRub(price.subtotalRub)} / ${formatUsd(price.subtotalUsd)}`} />
+        <div className="mt-4 space-y-2 rounded-lg border border-white/10 bg-black/25 p-3 text-sm">
+          <PriceRow label="Стоимость" value={`${formatRub(price.subtotalRub)} / ${formatUsd(price.subtotalUsd)}`} />
           {price.serviceFeeApplied ? (
-            <PriceRow label="Service fee" value={`${formatRub(price.serviceFeeRub)} / ${formatUsd(price.serviceFeeUsd)}`} />
+            <PriceRow label="Сервисный сбор" value={`${formatRub(price.serviceFeeRub)} / ${formatUsd(price.serviceFeeUsd)}`} />
           ) : null}
-          <PriceRow label="Total" value={`${formatRub(price.totalRub)} / ${formatUsd(price.totalUsd)}`} strong />
+          <PriceRow label="Итого" value={`${formatRub(price.totalRub)} / ${formatUsd(price.totalUsd)}`} strong />
         </div>
       </Panel>
 
-      <Panel>
+      <Panel className="p-5">
         <label className="block">
-          <span className="mb-2 block text-sm text-tg-hint">Recipient</span>
+          <span className="mb-2 block text-sm text-tg-hint">Получатель</span>
           <input
             value={recipient}
             onChange={(event) => setRecipient(event.target.value)}
-            placeholder="@username or Telegram ID"
-            className="h-12 w-full rounded-md border border-tg-border bg-black/20 px-3 text-base outline-none focus:border-tg-button"
+            placeholder="@username или Telegram ID"
+            className="h-12 w-full rounded-lg border border-tg-border bg-black/25 px-3 text-base outline-none focus:border-tg-button"
           />
         </label>
         <label className="mt-4 block">
-          <span className="mb-2 block text-sm text-tg-hint">Comment</span>
+          <span className="mb-2 block text-sm text-tg-hint">Комментарий</span>
           <textarea
             value={comment}
             onChange={(event) => setComment(event.target.value)}
             rows={4}
-            placeholder="Optional details for fulfillment"
-            className="w-full resize-none rounded-md border border-tg-border bg-black/20 px-3 py-3 text-base outline-none focus:border-tg-button"
+            placeholder="Необязательные детали для выдачи"
+            className="w-full resize-none rounded-lg border border-tg-border bg-black/25 px-3 py-3 text-base outline-none focus:border-tg-button"
           />
         </label>
       </Panel>
 
       {createOrder.isError ? <ErrorState message={createOrder.error.message} /> : null}
-      {!canAuthenticate ? <ErrorState message="Open the shop through Telegram Mini App to create an order." /> : null}
+      {!canAuthenticate ? <ErrorState message="Откройте магазин через Telegram Mini App, чтобы создать заказ." /> : null}
 
       <div className="grid grid-cols-2 gap-2">
         <Link href={productType === "stars" ? "/stars" : "/premium"}>
           <Button variant="secondary" className="w-full" icon={<ArrowLeft size={17} />}>
-            Back
+            Назад
           </Button>
         </Link>
         <Button onClick={() => router.push("/")} variant="danger" icon={<XCircle size={17} />}>
-          Cancel
+          Отмена
         </Button>
       </div>
       <Button disabled={!canSubmit} onClick={onSubmit} className="w-full" icon={<CheckCircle size={18} />}>
-        {createOrder.isPending ? "Creating order..." : "Confirm order"}
+        {createOrder.isPending ? "Создаем заказ..." : "Подтвердить заказ"}
       </Button>
     </AppShell>
   );

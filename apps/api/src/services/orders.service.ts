@@ -106,7 +106,7 @@ async function notifyOrderCreated(order: UserOrderWithRelations, user: User) {
   await Promise.allSettled([
     notifyUser(
       user.telegramId,
-      `Заказ <b>${order.orderNumber}</b> создан.\nСтатус: ожидает оплаты.`,
+      `Заказ <b>${order.orderNumber}</b> создан.\nСтатус: ожидает оплаты.\nПоддержка: @SuupStarbot`,
     ),
     notifyAdminsAboutOrderEvent({ event: "created", order, buyer: user }),
   ]);

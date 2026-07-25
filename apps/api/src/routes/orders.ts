@@ -12,7 +12,7 @@ ordersRouter.use(requireTelegramUser);
 
 function getOrderId(id: string | string[] | undefined) {
   if (!id || Array.isArray(id)) {
-    throw new ApiError(400, "Order id is required", "ORDER_ID_REQUIRED");
+    throw new ApiError(400, "ID заказа обязателен", "ORDER_ID_REQUIRED");
   }
 
   return id;
